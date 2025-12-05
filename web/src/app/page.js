@@ -152,7 +152,7 @@ export default function FloodMonitor() {
         {/* 1. NOTE UPDATE (Dòng chữ chạy hoặc tĩnh) */}
         <div className="bg-white/90 backdrop-blur shadow-sm rounded-lg px-4 py-2 text-xs text-slate-500 flex justify-center items-center gap-2 border border-slate-200 mx-2 sm:mx-0">
           <Activity size={14} className="text-blue-500" />
-          <span>Hệ thống tự động cập nhật chỉ số mỗi 10 phút từ các trạm đo & vệ tinh.</span>
+          <span>Hệ thống tự động cập nhật chỉ số mỗi 15 phút từ các trạm đo & vệ tinh.</span>
         </div>
 
         {/* 2. HERO DASHBOARD (SÔNG + MƯA) */}
