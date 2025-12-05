@@ -83,7 +83,6 @@ export default function FloodMonitor() {
       </div>
     );
   }
-
   // --- HELPERS & LOGIC ---
   const riverLevel = monitorData?.river?.current || 0;
   const rain3day = monitorData?.rain?.rain_3day || [0, 0, 0];
@@ -331,7 +330,7 @@ export default function FloodMonitor() {
                 <thead className="bg-slate-50 text-slate-500 font-medium uppercase text-[11px] tracking-wider">
                   <tr>
                     <th className="px-4 py-3">Trạm đo / Vị trí</th>
-                    <th className="px-4 py-3 text-right">Mưa 24h</th>
+                    <th className="px-4 py-3 text-right">Mưa hiện tại</th>
                     <th className="px-4 py-3 text-right hidden sm:table-cell">Trạng thái</th>
                   </tr>
                 </thead>
