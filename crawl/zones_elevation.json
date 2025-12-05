@@ -1,0 +1,54 @@
+{
+  "timestamp": "2025-12-05",
+  "source": "Open-Elevation API",
+  "zones": [
+    {
+      "name": "Phường Tây Nha Trang",
+      "lat": 12.2611,
+      "lon": 109.157,
+      "base_elevation": 5.0
+    },
+    {
+      "name": "Phường Bắc Nha Trang",
+      "lat": 12.3221,
+      "lon": 109.171,
+      "base_elevation": 237.0
+    },
+    {
+      "name": "Xã Diên Khánh",
+      "lat": 12.2625,
+      "lon": 109.0983,
+      "base_elevation": 12.0
+    },
+    {
+      "name": "Xã Diên Điền",
+      "lat": 12.3022,
+      "lon": 109.096,
+      "base_elevation": 14.0
+    },
+    {
+      "name": "Xã Suối Dầu",
+      "lat": 12.05,
+      "lon": 109.15,
+      "base_elevation": 25.0
+    },
+    {
+      "name": "Xã Cam Lâm",
+      "lat": 12.0017,
+      "lon": 109.2233,
+      "base_elevation": 9.0
+    },
+    {
+      "name": "Thị xã Ninh Hòa",
+      "lat": 12.38,
+      "lon": 109.05,
+      "base_elevation": 809.0
+    },
+    {
+      "name": "Huyện Khánh Vĩnh",
+      "lat": 12.26,
+      "lon": 108.9,
+      "base_elevation": 91.0
+    }
+  ]
+}
