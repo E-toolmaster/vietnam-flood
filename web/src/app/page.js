@@ -321,10 +321,10 @@ export default function FloodMonitor() {
               <h2 className="font-bold text-slate-800 flex items-center gap-2">
                 <Droplets className="w-5 h-5 text-blue-600" />
                 Trạm Đo Mưa Trọng Yếu
-                <p className="text-sm text-gray-500 -mt-2 mb-2">
-                  (cập nhật lúc: {monitorData.rain.updated})
-                </p>
               </h2>
+              <p className="text-sm text-gray-500 -mt-2 mb-2">
+                  (Cập nhật lúc: {monitorData.rain.updated})
+              </p>
               <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Vrain Data</span>
             </div>
             
