@@ -1,14 +1,14 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
+  BarChart, Bar, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
 import {
-  Droplets, CloudRain, AlertTriangle, Info, Search, Menu, X, 
-  ExternalLink, ChevronRight, Waves, ShieldAlert, MapPin, Clock, Activity
+  Droplets, CloudRain, AlertTriangle, Menu, X, 
+  ExternalLink, Waves, ShieldAlert, MapPin, Clock, Activity, FileText
 } from 'lucide-react';
 
-// === CẤU HÌNH LOGIC DỰ BÁO (Dựa trên dữ liệu lịch sử) ===
+// === CẤU HÌNH LOGIC DỰ BÁO ===
 const FLOOD_ZONES = [
   {
     threshold: 8.0, // BĐ1
@@ -66,7 +66,6 @@ export default function FloodMonitor() {
 
     fetchData();
     const interval = setInterval(fetchData, 600000); // 10 phút refresh 1 lần
-    // Clock tick
     const timer = setInterval(() => {
       setCurrentTime(new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }));
     }, 60000);
@@ -83,13 +82,16 @@ export default function FloodMonitor() {
       </div>
     );
   }
+
   // --- HELPERS & LOGIC ---
   const riverLevel = monitorData?.river?.current || 0;
+  const isEstimated = monitorData?.river?.is_estimated === 1; // Check cờ dự đoán
+
   const rain3day = monitorData?.rain?.rain_3day || [0, 0, 0];
   const rain3daySum = rain3day.reduce((a, b) => a + b, 0);
   const rainStations = monitorData?.rain_stations || [];
 
-  // Xác định trạng thái nguy hiểm (0: Bình thường, 1: BĐ1, 2: BĐ2, 3: BĐ3)
+  // Xác định trạng thái nguy hiểm
   let dangerLevel = 0;
   if (riverLevel >= 11.0) dangerLevel = 3;
   else if (riverLevel >= 9.5) dangerLevel = 2;
@@ -103,15 +105,14 @@ export default function FloodMonitor() {
       : dangerLevel === 2 
         ? 'from-orange-500 via-orange-400 to-orange-600' 
         : 'from-blue-600 via-blue-500 to-blue-700',
-    textAccent: dangerLevel >= 2 ? 'text-red-600' : 'text-blue-600',
   };
 
-  // Logic Dự báo điểm ngập (Filter forecast)
+  // Logic Dự báo điểm ngập
   const activeForecasts = FLOOD_ZONES.filter(zone => {
     if (zone.type === 'river') return riverLevel >= zone.threshold;
     if (zone.type === 'rain') return rain3daySum >= zone.threshold;
     return false;
-  }).sort((a, b) => b.threshold - a.threshold); // Lấy cái nặng nhất lên đầu
+  }).sort((a, b) => b.threshold - a.threshold);
 
   const chartData = [
     { name: 'Hôm kia', value: rain3day[0] },
@@ -149,7 +150,7 @@ export default function FloodMonitor() {
       {/* --- MAIN CONTENT --- */}
       <main className="max-w-5xl mx-auto px-4 mt-4 relative z-10 space-y-6">
         
-        {/* 1. NOTE UPDATE (Dòng chữ chạy hoặc tĩnh) */}
+        {/* 1. NOTE UPDATE */}
         <div className="bg-white/90 backdrop-blur shadow-sm rounded-lg px-4 py-2 text-xs text-slate-500 flex justify-center items-center gap-2 border border-slate-200 mx-2 sm:mx-0">
           <Activity size={14} className="text-blue-500" />
           <span>Hệ thống tự động cập nhật chỉ số mỗi 15 phút từ các trạm đo & vệ tinh.</span>
@@ -159,7 +160,6 @@ export default function FloodMonitor() {
         <div className={`rounded-2xl shadow-xl overflow-hidden text-white bg-gradient-to-br ${theme.heroGradient} transition-all duration-700`}>
           <div className="p-6 md:p-8 grid md:grid-cols-2 gap-10 items-center relative">
             
-            {/* Hiệu ứng nền nước (trang trí) */}
             <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
                <Waves size={300} />
             </div>
@@ -171,7 +171,7 @@ export default function FloodMonitor() {
                 <span className="uppercase text-sm font-bold tracking-widest">Sông Cái (Đồng Trăng)</span>
               </div>
               
-              <div className="flex items-end gap-3 mb-6">
+              <div className="flex items-end gap-3 mb-4">
                 <span className="text-7xl font-black tracking-tighter leading-none">
                   {riverLevel.toFixed(2)}
                 </span>
@@ -186,6 +186,27 @@ export default function FloodMonitor() {
                 </div>
               </div>
 
+              {/* === [EDIT] KHUNG CẢNH BÁO DỰ ĐOÁN === */}
+              {isEstimated ? (
+                <div className="bg-yellow-300/20 border border-yellow-300/50 rounded-lg p-3 mb-6 backdrop-blur-sm">
+                  <div className="flex items-start gap-3">
+                     <AlertTriangle size={20} className="text-yellow-300 shrink-0 mt-0.5" />
+                     <div>
+                        <p className="text-xs font-bold text-yellow-200 uppercase mb-1">DỮ LIỆU DỰ ĐOÁN</p>
+                        <p className="text-[11px] leading-relaxed text-white/90">
+                           Mực nước được tính toán từ vệ tinh & mưa đầu nguồn. 
+                           <br/><b>Không phải số đo thực tế tại trạm.</b> Vui lòng tham khảo thêm nguồn chính thống.
+                        </p>
+                     </div>
+                  </div>
+                </div>
+              ) : (
+                 <div className="mb-6 inline-flex items-center gap-2 bg-white/20 px-3 py-1.5 rounded-lg text-xs font-medium border border-white/10">
+                    <ShieldAlert size={14}/> <span>Nguồn: Báo Khánh Hòa</span>
+                 </div>
+              )}
+              {/* === [END EDIT] === */}
+
               {/* Thanh đo trực quan */}
               <div className="w-full bg-black/20 h-3 rounded-full overflow-hidden relative mb-2">
                 <div className="absolute left-[62%] top-0 bottom-0 w-0.5 bg-white/30 z-20" title="BĐ1"></div>
@@ -197,11 +218,7 @@ export default function FloodMonitor() {
                 ></div>
               </div>
               <div className="flex justify-between text-[10px] opacity-70 font-mono">
-                <span>0m</span>
-                <span>BĐ1: 8.0</span>
-                <span>BĐ2: 9.5</span>
-                <span>BĐ3: 11.0</span>
-                <span>MAX: 12.8</span>
+                <span>0m</span><span>BĐ1:8.0</span><span>BĐ2:9.5</span><span>BĐ3:11.0</span><span>MAX:12.8</span>
               </div>
             </div>
 
@@ -249,73 +266,66 @@ export default function FloodMonitor() {
           </div>
         </div>
 
-        {/* 3. PHÂN TÍCH & DỰ BÁO NGẬP LỤT (LUÔN HIỂN THỊ) */}
-<section className={`rounded-xl shadow-sm border-l-4 overflow-hidden mb-6 transition-all
-  ${activeForecasts.length > 0 ? 'bg-white border-red-500 shadow-red-100' : 'bg-white border-green-500 shadow-green-50'}`}>
-  
-  <div className={`p-4 border-b flex items-center justify-between
-    ${activeForecasts.length > 0 ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
-    <h2 className={`font-bold text-lg flex items-center gap-2
-      ${activeForecasts.length > 0 ? 'text-red-800' : 'text-green-800'}`}>
-      {activeForecasts.length > 0 ? <ShieldAlert className="animate-bounce" /> : <ShieldAlert />}
-      DỰ BÁO TÁC ĐỘNG & ĐIỂM NGẬP
-    </h2>
-    <span className={`text-xs font-bold px-2 py-1 rounded uppercase
-      ${activeForecasts.length > 0 ? 'bg-red-200 text-red-800' : 'bg-green-200 text-green-800'}`}>
-      {activeForecasts.length > 0 ? 'CÓ NGUY CƠ CAO' : 'AN TOÀN'}
-    </span>
-  </div>
-
-  <div className="p-5">
-    {/* LOGIC HIỂN THỊ DANH SÁCH NGẬP HOẶC THÔNG BÁO AN TOÀN */}
-    {activeForecasts.length > 0 ? (
-      <div className="space-y-4">
-        <div className="text-sm text-slate-600 bg-red-50 p-3 rounded border border-red-100">
-          ⚠️ <strong>CẢNH BÁO:</strong> Dựa trên mực nước Sông Cái hiện tại ({riverLevel.toFixed(2)}m) 
-          và lượng mưa tích lũy ({rain3daySum.toFixed(1)}mm), hệ thống dự báo các khu vực sau có nguy cơ ngập lụt:
-        </div>
-        {activeForecasts.map((forecast, idx) => (
-          <div key={idx} className="bg-slate-50 p-4 rounded-lg border border-slate-100">
-            <h3 className="font-bold text-slate-800 mb-2 flex items-center gap-2 text-sm uppercase">
-              <div className={`w-2.5 h-2.5 rounded-full ${forecast.level === 'critical' ? 'bg-red-600 animate-ping' : 'bg-orange-500'}`}></div>
-              {forecast.title}
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {forecast.areas.map((area, i) => (
-                <span key={i} className="bg-white text-slate-700 px-3 py-1.5 rounded border border-slate-200 text-sm font-medium shadow-sm flex items-center gap-1">
-                  <MapPin size={12} className="text-red-500" /> {area}
-                </span>
-              ))}
-            </div>
+        {/* 3. PHÂN TÍCH & DỰ BÁO NGẬP LỤT */}
+        <section className={`rounded-xl shadow-sm border-l-4 overflow-hidden mb-6 transition-all
+          ${activeForecasts.length > 0 ? 'bg-white border-red-500 shadow-red-100' : 'bg-white border-green-500 shadow-green-50'}`}>
+          
+          <div className={`p-4 border-b flex items-center justify-between
+            ${activeForecasts.length > 0 ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
+            <h2 className={`font-bold text-lg flex items-center gap-2
+              ${activeForecasts.length > 0 ? 'text-red-800' : 'text-green-800'}`}>
+              {activeForecasts.length > 0 ? <ShieldAlert className="animate-bounce" /> : <ShieldAlert />}
+              DỰ BÁO TÁC ĐỘNG & ĐIỂM NGẬP
+            </h2>
+            <span className={`text-xs font-bold px-2 py-1 rounded uppercase
+              ${activeForecasts.length > 0 ? 'bg-red-200 text-red-800' : 'bg-green-200 text-green-800'}`}>
+              {activeForecasts.length > 0 ? 'CÓ NGUY CƠ CAO' : 'AN TOÀN'}
+            </span>
           </div>
-        ))}
-      </div>
-    ) : (
-      <div className="flex flex-col items-center text-center py-4 space-y-3">
-        <div className="bg-green-100 p-3 rounded-full">
-          <ShieldAlert size={32} className="text-green-600" />
-        </div>
-        <div>
-          <h3 className="font-bold text-green-800 text-lg">Chưa phát hiện nguy cơ ngập lụt</h3>
-          <p className="text-slate-500 text-sm mt-1 max-w-lg mx-auto leading-relaxed">
-            Dựa vào lượng mưa ({rain3daySum.toFixed(1)}mm) và mực nước sông hiện tại ({riverLevel.toFixed(2)}m), 
-            các chỉ số đều nằm trong <strong>ngưỡng an toàn (Dưới Báo động 1)</strong>.
-            <br/>
-            Chưa ghi nhận khả năng ngập lụt tại các vùng trũng thấp ven sông Cái Nha Trang.
-          </p>
-        </div>
-        <div className="text-xs text-slate-400 mt-2 border-t border-slate-100 pt-3 w-full max-w-xs">
-          Tiếp tục theo dõi, hệ thống sẽ cảnh báo ngay khi mực nước vượt ngưỡng 8.0m.
-        </div>
-      </div>
-    )}
-  </div>
-</section>
 
+          <div className="p-5">
+            {activeForecasts.length > 0 ? (
+              <div className="space-y-4">
+                <div className="text-sm text-slate-600 bg-red-50 p-3 rounded border border-red-100">
+                  ⚠️ <strong>CẢNH BÁO:</strong> Dựa trên mực nước Sông Cái hiện tại ({riverLevel.toFixed(2)}m) 
+                  và lượng mưa tích lũy ({rain3daySum.toFixed(1)}mm), hệ thống dự báo các khu vực sau có nguy cơ ngập lụt:
+                </div>
+                {activeForecasts.map((forecast, idx) => (
+                  <div key={idx} className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                    <h3 className="font-bold text-slate-800 mb-2 flex items-center gap-2 text-sm uppercase">
+                      <div className={`w-2.5 h-2.5 rounded-full ${forecast.level === 'critical' ? 'bg-red-600 animate-ping' : 'bg-orange-500'}`}></div>
+                      {forecast.title}
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {forecast.areas.map((area, i) => (
+                        <span key={i} className="bg-white text-slate-700 px-3 py-1.5 rounded border border-slate-200 text-sm font-medium shadow-sm flex items-center gap-1">
+                          <MapPin size={12} className="text-red-500" /> {area}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center text-center py-4 space-y-3">
+                <div className="bg-green-100 p-3 rounded-full">
+                  <ShieldAlert size={32} className="text-green-600" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-green-800 text-lg">Chưa phát hiện nguy cơ ngập lụt</h3>
+                  <p className="text-slate-500 text-sm mt-1 max-w-lg mx-auto leading-relaxed">
+                    Dựa vào lượng mưa ({rain3daySum.toFixed(1)}mm) và mực nước sông hiện tại ({riverLevel.toFixed(2)}m), 
+                    các chỉ số đều nằm trong <strong>ngưỡng an toàn</strong>.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
 
         <div className="grid md:grid-cols-3 gap-6">
           
-          {/* 4. BẢNG MƯA CHI TIẾT (VRAIN) */}
+          {/* 4. BẢNG MƯA CHI TIẾT (VRAIN) - ĐÃ KHÔI PHỤC */}
           <section className="md:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col">
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h2 className="font-bold text-slate-800 flex items-center gap-2">
@@ -323,7 +333,7 @@ export default function FloodMonitor() {
                 Trạm Đo Mưa Trọng Yếu
               </h2>
               <p className="text-sm text-gray-500 -mt-2 mb-2">
-                  (Cập nhật lúc: {monitorData.rain.updated})
+                  (Cập nhật: {monitorData?.rain?.updated || '...'})
               </p>
               <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Vrain Data</span>
             </div>
@@ -403,12 +413,9 @@ export default function FloodMonitor() {
                   const data = monitorData?.[lake.id];
                   const isDischarging = data?.current > 0;
                   
-                  // Dùng thẻ 'a' nếu có link, ngược lại dùng 'div'
                   const Wrapper = data?.link ? 'a' : 'div';
                   const wrapperProps = data?.link ? { 
-                    href: data.link, 
-                    target: "_blank", 
-                    rel: "noreferrer",
+                    href: data.link, target: "_blank", rel: "noreferrer",
                     title: "Xem bài viết gốc trên Báo Khánh Hòa"
                   } : {};
 
@@ -416,7 +423,6 @@ export default function FloodMonitor() {
                     <Wrapper key={lake.id} {...wrapperProps} className={`flex justify-between items-center p-3 rounded-lg border transition-all relative overflow-hidden group
                       ${isDischarging ? 'bg-red-50 border-red-200 shadow-sm hover:bg-red-100' : 'bg-slate-50 border-slate-100 opacity-70 hover:opacity-100'}`}>
                       
-                      {/* Indicator Light */}
                       {isDischarging && <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500 animate-pulse"></div>}
 
                       <div className="pl-2">
@@ -424,13 +430,9 @@ export default function FloodMonitor() {
                           {lake.label}
                           {data?.link && <ExternalLink size={10} className="opacity-0 group-hover:opacity-100 transition-opacity text-blue-500" />}
                         </div>
-                        {data?.news_time ? (
-                          <div className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5">
-                             <Clock size={10} /> Cập nhật: {data.news_time}
-                          </div>
-                        ) : (
-                          <div className="text-[10px] text-slate-400 italic mt-0.5">Chưa có tin mới</div>
-                        )}
+                        <div className="text-[10px] text-slate-400 italic mt-0.5">
+                           {data?.news_time ? `Cập nhật: ${data.news_time}` : "Chưa có tin mới"}
+                        </div>
                       </div>
 
                       <div className="text-right">
@@ -445,23 +447,26 @@ export default function FloodMonitor() {
               </div>
             </section>
 
-            {/* News Feed Compact */}
+            {/* === [EDIT] News Feed (SỬA TIÊU ĐỀ + LOGIC BÔI ĐỎ) === */}
             <section className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="p-3 bg-slate-50 border-b border-slate-100 font-bold text-xs text-slate-500 uppercase tracking-wide">
-                Tin Tức Hiện Trường
+              <div className="p-3 bg-slate-50 border-b border-slate-100 font-bold text-xs text-slate-700 uppercase tracking-wide flex items-center gap-2">
+                <FileText size={14} className="text-blue-600"/>
+                Tin tức mới từ báo Khánh Hòa
               </div>
               <div className="divide-y divide-slate-100 max-h-[300px] overflow-y-auto">
-                {alerts.slice(0, 5).map((news, i) => (
-                  <a key={i} href={news.link} target="_blank" className="block p-3 hover:bg-blue-50 transition-colors">
+                {alerts.slice(0, 8).map((news, i) => (
+                  <a key={i} href={news.link} target="_blank" className={`block p-3 transition-colors
+                     ${news.is_urgent ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-blue-50'}`}>
                     <div className="flex gap-2">
                       <div className="mt-1 shrink-0">
-                         {news.is_urgent ? <AlertTriangle size={14} className="text-red-500" /> : <div className="w-3 h-3 rounded-full bg-blue-200 mt-0.5"></div>}
+                         {news.is_urgent ? <AlertTriangle size={14} className="text-red-600 animate-pulse" /> : <div className="w-3 h-3 rounded-full bg-blue-200 mt-0.5"></div>}
                       </div>
                       <div>
-                        <div className={`text-xs font-medium leading-snug ${news.is_urgent ? 'text-red-700' : 'text-slate-700'}`}>
+                        <div className={`text-xs font-medium leading-snug ${news.is_urgent ? 'text-red-700 font-bold' : 'text-slate-700'}`}>
+                          {news.is_urgent && <span className="inline-block bg-red-600 text-white text-[9px] px-1 rounded mr-1">CẢNH BÁO</span>}
                           {news.title}
                         </div>
-                        <div className="text-[10px] text-slate-400 mt-1">{news.time_crawled} • {news.source}</div>
+                        <div className="text-[10px] text-slate-400 mt-1">{news.time_crawled}</div>
                       </div>
                     </div>
                   </a>

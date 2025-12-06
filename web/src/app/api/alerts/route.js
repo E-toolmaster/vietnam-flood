@@ -19,11 +19,16 @@ export async function GET() {
       if (row.name === 'Sông Cái (Đồng Trăng)' || row.type === 'river') {
         metrics.river = {
           current: row.value,
-          bd1: 8.0, bd2: 9.5, bd3: 11.0,
-          history_max: 12.80,
-          updated: row.updated_at
+          bd1: 8.0, bd2: 9.5, bd3: 10.5, // Updated BĐ3 to 10.5
+          history_max: 11.9, // Updated history max 2018
+          updated: row.updated_at,
+          // Thêm thông tin nguồn dữ liệu mới cho Frontend
+          description: row.description,
+          source_link: row.source_link,
+          is_estimated: row.is_estimated
         };
-      } 
+      }
+      
       // 2.2. Mưa Đầu Nguồn (Tổng hợp 3 ngày)
       else if (row.name === 'Mưa Đầu Nguồn (Khánh Vĩnh)') {
         const rain3dayStr = row.description || '0,0,0';
@@ -33,6 +38,7 @@ export async function GET() {
           updated: row.updated_at
         };
       }
+      
       // 2.3. Mưa Toàn Tỉnh (Report văn bản)
       else if (row.name === 'Mưa Toàn Tỉnh') {
         metrics.province_rain = {
@@ -40,6 +46,7 @@ export async function GET() {
           updated: row.updated_at
         };
       }
+      
       // 2.4. Các Hồ Chứa
       else if (row.name.includes('Hồ')) {
         // Chuẩn hóa key: "Hồ Đá Bàn" -> "ho_da_ban"
@@ -47,19 +54,19 @@ export async function GET() {
           .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Bỏ dấu tiếng Việt
           .replace(/đ/g, "d")
           .replace(/\s+/g, '_');
-          
+        
         metrics[keyName] = {
           name: row.name, // Giữ tên gốc có dấu để hiển thị
           current: row.value,
           updated: row.updated_at,
-          news_time: row.news_time
+          news_time: row.news_time,
+          source_link: row.source_link // Link gốc bài viết xả lũ
         };
       }
     });
 
     // 3. Lấy danh sách Trạm Mưa Trọng Yếu (Vrain) hôm nay
     // Lấy ngày hiện tại theo giờ server (hoặc VN nếu set TZ)
-    // Ở đây lấy chuỗi YYYY-MM-DD đơn giản
     const today = new Date().toLocaleString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).slice(0, 10);
     
     const rainStationRows = db.prepare(`
@@ -68,11 +75,11 @@ export async function GET() {
       WHERE date = ? AND is_key = 1
       ORDER BY mm DESC
     `).all(today);
-
+    
     metrics.rain_stations = rainStationRows;
 
     db.close();
-    
+
     return Response.json({ 
       data: alerts, 
       metrics: metrics 
