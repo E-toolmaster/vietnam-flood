@@ -10,11 +10,14 @@ const iconUrl = 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png';
 const iconRetinaUrl = 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon-2x.png';
 const shadowUrl = 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png';
 
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({ iconRetinaUrl, iconUrl, shadowUrl });
+// Fix lỗi icon mặc định trên NextJS
+if (typeof window !== 'undefined') {
+    delete L.Icon.Default.prototype._getIconUrl;
+    L.Icon.Default.mergeOptions({ iconRetinaUrl, iconUrl, shadowUrl });
+}
 
 // Icon Cảnh báo Đỏ (Nhấp nháy)
-const dangerIcon = new L.DivIcon({
+const dangerIcon = L.divIcon({
     className: 'custom-danger-icon',
     html: `<div class="relative">
              <div class="absolute -top-3 -left-3 w-6 h-6 bg-red-500 rounded-full animate-ping opacity-75"></div>
@@ -24,7 +27,7 @@ const dangerIcon = new L.DivIcon({
 });
 
 // Icon Cảnh báo Vàng (An toàn hơn)
-const safeIcon = new L.DivIcon({
+const safeIcon = L.divIcon({
     className: 'custom-safe-icon',
     html: `<div class="relative">
              <div class="absolute -top-1.5 -left-1.5 w-3 h-3 bg-blue-500 rounded-full border-2 border-white shadow-lg"></div>
@@ -40,7 +43,14 @@ function MapController({ center, zoom }) {
     return null;
 }
 
-export default function MapComponent({ center, zoom, markers }) {
+// === FIX: Thêm giá trị mặc định markers = [] ===
+export default function MapComponent({ center, zoom, markers = [] }) {
+    
+    // Dữ liệu fallback nếu markers rỗng để map không trống trơn
+    const displayMarkers = markers.length > 0 ? markers : [
+        { coords: [12.25, 109.06], name: "Sông Cái (Đồng Trăng)", level: 1, base_elevation: 0 }
+    ];
+
     return (
         <MapContainer 
             center={[12.25, 109.10]} 
@@ -50,20 +60,14 @@ export default function MapComponent({ center, zoom, markers }) {
         >
             <MapController center={center} zoom={zoom} />
             
-                         {/* Stamen Terrain (Địa hình nghệ thuật - Rất rõ sông suối) */}
-                         <TileLayer
+            {/* Google Satellite Layer */}
+            <TileLayer
                 url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
                 attribution="Google Maps Satellite"
             />
 
-
-            {/* Nếu thích bản đồ đường phố (Carto Voyager) thì uncomment dòng dưới */}
-            {/* <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-            /> */}
-
-            {markers.map((zone, idx) => (
+            {/* Render Markers an toàn */}
+            {displayMarkers.map((zone, idx) => (
                 <Marker 
                     key={idx} 
                     position={zone.coords} 
@@ -74,7 +78,9 @@ export default function MapComponent({ center, zoom, markers }) {
                             <strong className={`block uppercase text-xs mb-1 ${zone.level >= 2 ? 'text-red-600' : 'text-blue-600'}`}>
                                 {zone.name}
                             </strong>
-                            <p className="text-xs text-gray-600 m-0">Độ cao nền: {zone.base_elevation}m</p>
+                            {zone.base_elevation !== undefined && (
+                                <p className="text-xs text-gray-600 m-0">Độ cao nền: {zone.base_elevation}m</p>
+                            )}
                         </div>
                     </Popup>
                 </Marker>

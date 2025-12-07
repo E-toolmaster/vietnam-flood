@@ -144,7 +144,7 @@ export default function FloodMonitor() {
           <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden p-2 hover:bg-white/10 rounded">
             {isMenuOpen ? <X /> : <Menu />}
           </button>
-        </div>
+        </div> 
       </header>
 
       {/* --- MAIN CONTENT --- */}
@@ -233,7 +233,7 @@ export default function FloodMonitor() {
                   <div className="text-3xl font-bold">{rain3daySum.toFixed(1)} <span className="text-base font-normal">mm</span></div>
                 </div>
                 <div className="text-right text-xs opacity-70">
-                  Tại trạm đo<br/>Khánh Vĩnh
+                  Tại các trạm đo<br/>Khánh Vĩnh
                 </div>
               </div>
 
