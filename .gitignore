@@ -1,0 +1,24 @@
+# --- Phần cho Crawler (Python) ---
+# Bỏ qua database
+crawl/*.db
+crawl/flood.db
+
+# Bỏ qua file rác sinh ra khi chạy debug/test
+crawl/debug_vrain.html
+crawl/debug_vrain.png
+crawl/__pycache__/
+crawl/*.pyc
+
+# Bỏ qua môi trường ảo (nếu có)
+crawl/venv/
+crawl/env/
+
+# --- Phần cho Web (NextJS) ---
+# (Thực ra web đã có gitignore riêng rồi, nhưng khai báo thêm ở đây cho chắc cũng không sao)
+web/node_modules/
+web/.next/
+web/out/
+web/.env*.local
+
+# --- Hệ thống ---
+.DS_Store
