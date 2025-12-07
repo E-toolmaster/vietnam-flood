@@ -462,10 +462,10 @@ export default function FloodMonitor() {
                          {news.is_urgent ? <AlertTriangle size={14} className="text-red-600 animate-pulse" /> : <div className="w-3 h-3 rounded-full bg-blue-200 mt-0.5"></div>}
                       </div>
                       <div>
-                        <div className={`text-xs font-medium leading-snug ${news.is_urgent ? 'text-red-700 font-bold' : 'text-slate-700'}`}>
-                          {news.is_urgent && <span className="inline-block bg-red-600 text-white text-[9px] px-1 rounded mr-1">CẢNH BÁO</span>}
-                          {news.title}
-                        </div>
+                      <div className={`text-xs font-medium leading-snug ${news.is_urgent ? 'text-red-700 font-bold' : 'text-slate-700'}`}>
+                        {!!news.is_urgent && <span className="inline-block bg-red-600 text-white text-[9px] px-1 rounded mr-1">CẢNH BÁO</span>}
+                        {news.title}
+                      </div>
                         <div className="text-[10px] text-slate-400 mt-1">{news.time_crawled}</div>
                       </div>
                     </div>

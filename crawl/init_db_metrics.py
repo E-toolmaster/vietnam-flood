@@ -16,7 +16,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS alerts
 c.execute('''CREATE TABLE IF NOT EXISTS metrics
              (id INTEGER PRIMARY KEY AUTOINCREMENT,
               type TEXT, name TEXT UNIQUE, value REAL, unit TEXT, 
-              updated_at TEXT, news_time TEXT, description TEXT, source_link TEXT)''')
+              updated_at TEXT, news_time TEXT, description TEXT, source_link TEXT, is_estimated INTEGER DEFAULT 0)''')
 
 # Reset data cũ
 c.execute("DELETE FROM metrics")
