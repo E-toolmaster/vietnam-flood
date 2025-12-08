@@ -271,19 +271,70 @@ export default function FloodMonitor() {
 
 
               {/* Thanh đo trực quan */}
-              <div className="w-full bg-black/20 h-3 rounded-full overflow-hidden relative mb-2">
-                <div className="absolute left-[62%] top-0 bottom-0 w-0.5 bg-white/30 z-20" title="BĐ1"></div>
-                <div className="absolute left-[74%] top-0 bottom-0 w-0.5 bg-white/30 z-20" title="BĐ2"></div>
-                <div className="absolute left-[86%] top-0 bottom-0 w-0.5 bg-white/50 z-20" title="BĐ3"></div>
-                <div 
-                  className={`h-full transition-all duration-1000 ease-out ${dangerLevel >= 2 ? 'bg-white animate-pulse' : 'bg-green-300'}`}
-                  style={{ width: `${(riverLevel / 12.8) * 100}%` }} 
-                ></div>
-              </div>
-              <div className="flex justify-between text-[10px] opacity-70 font-mono">
-                <span>0m</span><span>BĐ1:8.0</span><span>BĐ2:9.5</span><span>BĐ3:11.0</span><span>MAX:12.8</span>
-              </div>
+              <div className="relative w-full mb-8 mt-4 px-1"> {/* Thêm padding xíu để text đỡ bị cắt lề */}
+                 
+                 {/* Container nền */}
+                 <div className="w-full bg-black/30 h-4 rounded-full overflow-hidden relative border border-white/10">
+                    
+                    {/* VẠCH BÁO ĐỘNG (Dùng style left chính xác) */}
+                    
+                    {/* BĐ1: 8.0m -> 61.77% */}
+                    <div className="absolute top-0 bottom-0 w-[2px] bg-yellow-400 z-30 shadow-[0_0_8px_rgba(250,204,21,1)]" 
+                         style={{ left: '61.77%' }} 
+                         title="Báo động 1: 8.0m"></div>
+                    
+                    {/* BĐ2: 9.5m -> 73.36% */}
+                    <div className="absolute top-0 bottom-0 w-[2px] bg-orange-500 z-30 shadow-[0_0_8px_rgba(249,115,22,1)]" 
+                         style={{ left: '73.36%' }} 
+                         title="Báo động 2: 9.5m"></div>
+                    
+                    {/* BĐ3: 11.0m -> 84.94% */}
+                    <div className="absolute top-0 bottom-0 w-[2px] bg-red-600 z-30 shadow-[0_0_8px_rgba(220,38,38,1)] animate-pulse" 
+                         style={{ left: '84.94%' }} 
+                         title="Báo động 3: 11.0m"></div>
 
+                    {/* THANH MỰC NƯỚC HIỆN TẠI (Max 12.95) */}
+                    <div 
+                      className={`h-full transition-all duration-1000 ease-out relative 
+                        ${dangerLevel >= 2 ? 'bg-gradient-to-r from-orange-500 to-red-600' : 'bg-gradient-to-r from-cyan-400 to-green-400'}`}
+                      style={{ width: `${Math.min((riverLevel / 12.95) * 100, 100)}%` }} 
+                    >
+                        {/* Hiệu ứng đầu thanh */}
+                        <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-white shadow-[0_0_10px_white]"></div>
+                    </div>
+                 </div>
+                 
+                 {/* LABEL MỐC (Căn chỉnh tuyệt đối - translate-x-1/2 để tâm chữ trùng vạch) */}
+                 <div className="relative h-6 text-[9px] font-mono font-bold mt-1.5 select-none w-full">
+                    {/* 0m */}
+                    <span className="absolute left-0 text-white/50 -translate-x-1/4">0m</span>
+                    
+                    {/* BĐ1 */}
+                    <div className="absolute flex flex-col items-center gap-0.5 -translate-x-1/2" style={{ left: '61.77%' }}>
+                        <span className="text-yellow-300 leading-none">BĐ1</span>
+                        <span className="text-yellow-300/50 text-[8px] leading-none">8.0</span>
+                    </div>
+
+                    {/* BĐ2 */}
+                    <div className="absolute flex flex-col items-center gap-0.5 -translate-x-1/2" style={{ left: '73.36%' }}>
+                        <span className="text-orange-300 leading-none">BĐ2</span>
+                        <span className="text-orange-300/50 text-[8px] leading-none">9.5</span>
+                    </div>
+
+                    {/* BĐ3 */}
+                    <div className="absolute flex flex-col items-center gap-0.5 -translate-x-1/2" style={{ left: '84.94%' }}>
+                        <span className="text-red-400 leading-none">BĐ3</span>
+                        <span className="text-red-400/50 text-[8px] leading-none">11.0</span>
+                    </div>
+
+                    {/* MAX (Canh phải) */}
+                    <div className="absolute right-0 flex flex-col items-end gap-0.5 translate-x-1/4">
+                        <span className="text-white/60 leading-none">Đỉnh lũ 2025</span>
+                        <span className="text-white/40 text-[8px] leading-none">12.95m</span>
+                    </div>
+                 </div>
+              </div>
+              
               {/* Biểu đồ mực nước gần đây */}
               {riverHistory.length > 0 && (
                 <div className="mt-4 bg-black/10 rounded-lg p-3 border border-white/10">
