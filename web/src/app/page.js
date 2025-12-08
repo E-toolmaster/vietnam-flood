@@ -56,7 +56,15 @@ export default function FloodMonitor() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch('/api/alerts');
+        // Thêm timestamp để lừa browser không cache URL
+        const t = new Date().getTime(); 
+        const res = await fetch(`/api/alerts?t=${t}`, {
+            cache: 'no-store', // Bắt buộc fetch mới
+            next: { revalidate: 0 } // Chỉ thị cho Next.js
+        });
+        
+        if (!res.ok) throw new Error('Network response was not ok');
+        
         const json = await res.json();
         setMonitorData(json.metrics);
         setAlerts(json.data || []);

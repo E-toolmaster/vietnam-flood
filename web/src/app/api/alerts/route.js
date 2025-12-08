@@ -1,5 +1,8 @@
 import Database from 'better-sqlite3';
 import path from 'path';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
 
 export async function GET() {
   try {
@@ -119,7 +122,17 @@ export async function GET() {
     metrics.rain_stations = rainStationRows;
 
     db.close();
-    return Response.json({ data: alerts, metrics });
+    return Response.json(
+        { data: alerts, metrics },
+        { 
+          status: 200,
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+          }
+        }
+      );
   } catch (error) {
     console.error('API ERROR:', error);
     return Response.json({ error: 'Server Error' }, { status: 500 });
