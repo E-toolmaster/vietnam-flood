@@ -1,0 +1,588 @@
+{
+  "type": "FeatureCollection",
+  "total_found": 7,
+  "timestamp": "Mon, 08 Dec 2025 04:02:49 GMT",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          109.096645,
+          12.315402
+        ]
+      },
+      "properties": {
+        "maho": "cc907ccc-de55-4d62-a3a1-54cde3fa1925",
+        "tenho": "Am Chúa",
+        "label": "Am Chúa",
+        "kinhdo": 109.096645,
+        "vido": 12.315402,
+        "phanloaihotheodungtich": "1-10 triệu m3",
+        "phanloaihotheonghidinh114": "Đập, hồ chứa nước lớn",
+        "diadiem": "Diên Khánh",
+        "matinh": "56",
+        "tentinh": "Khánh Hòa",
+        "capcongtrinh": "Cấp 3",
+        "dientichluuvuc": "13.65",
+        "mucnuocdangbinhthuong": "35.5",
+        "mucnuocdanggiacuong": null,
+        "mucnuocchet": "23.9",
+        "dungtichtoanbo": "4.73",
+        "dungtichmucnuocdangbinhthuong": "4.69",
+        "dungtichhuuich": "4.47",
+        "dungtichchet": "0.26",
+        "tansuatdambaotuoi": null,
+        "tansuatluthietke": "1",
+        "tansuatlukiemtra": "0.2",
+        "luuluongdinhluthietke": "292",
+        "dientichtuoi": "500",
+        "namxaydung": "2002",
+        "namhoanthanh": "2002",
+        "namsuachuanangcap": "2002",
+        "nhiemvu": "",
+        "mucnuoclukiemtra": null,
+        "last_update": "2025-12-07T07:00:00",
+        "tl_dbt": false,
+        "idphanloaihotheonghidinh114": 1,
+        "idphanloaihotheodungtich": 1,
+        "search_content": [
+          {
+            "Text": "am",
+            "Count": 1
+          },
+          {
+            "Text": "chua",
+            "Count": 1
+          }
+        ],
+        "tenchuho": null,
+        "sdt_chuho": null,
+        "sdt_trucho": null,
+        "province_id": 511,
+        "has_validated": true,
+        "order_province": 37,
+        "lake_care": false,
+        "dang_xa": null,
+        "luuluong_den": null,
+        "luuluong_xa": 3.28,
+        "thoigian_ghinhan_luuluong": "2025-09-26T07:00:00",
+        "maluuvuc": 11,
+        "lvs": "Sông Nam Bộ",
+        "lng": 109.096645,
+        "lat": 12.315402,
+        "data": [
+          {
+            "id": 3901692,
+            "maho": "cc907ccc-de55-4d62-a3a1-54cde3fa1925",
+            "tenho": "Am Chúa (*)",
+            "matinh": "56",
+            "tentinh": "Khánh Hòa",
+            "thoigian": "2025-12-07 07:00:00",
+            "thoigiancapnhat": "2025-12-07 07:00:00",
+            "tddungtich": 4.13275957,
+            "tdmucnuoc": 34.64,
+            "difference_mucnuoc": -0.00999999999999801,
+            "update_time": "2025-12-08T07:30:17.838747",
+            "time_convert": "07/12  07:00"
+          }
+        ],
+        "popupInfo": "\n\n<ul class=\"station-popup-info\">\n    <li>Tên hồ: <b>Am Ch&#xFA;a</b></li>\n    <li class=\"hidden\">Mã hồ: <b id=\"idLake\">cc907ccc-de55-4d62-a3a1-54cde3fa1925</b></li>\n    <li class=\"hidden\">Nguồn: <b id=\"sourceLake\">HTL</b></li>\n    <li>Dung tích toàn bộ: <b>4.73 triệu m<sup>3</sup></b></li>\n    <li>MNTL/MNDBT: <b>34.64/35.5 (m)</b></li>\n    <li>Qđến/Qxả: <b><span>_</span>/3.28 m3/s</b></li>\n    <li>Thời gian cập nhật lưu lượng: <b>26/09/2025 07:00:00</b></li>\n    <li>Thời gian cập nhật MNTL: <b>07/12  07:00</b></li>\n    <li class='detalRain' data-id='cc907ccc-de55-4d62-a3a1-54cde3fa1925' onclick=\"detailEVN('cc907ccc-de55-4d62-a3a1-54cde3fa1925','HTL')\"><a class=\"description-class\">Chi tiết <i class=\"fa fa-caret-right\" aria-hidden=\"true\"></i> </a></li>\n</ul>\n\n"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          109.051213,
+          12.154412
+        ]
+      },
+      "properties": {
+        "maho": "8ecdcb6d-7906-4e7f-bc43-1d0168f4f9f8",
+        "tenho": "Suối Dầu",
+        "label": "Suối Dầu",
+        "kinhdo": 109.051213,
+        "vido": 12.154412,
+        "phanloaihotheodungtich": ">10 triệu m3",
+        "phanloaihotheonghidinh114": "Đập, hồ chứa nước lớn",
+        "diadiem": "Cam Lâm",
+        "matinh": "56",
+        "tentinh": "Khánh Hòa",
+        "capcongtrinh": "Cấp 3",
+        "dientichluuvuc": "120",
+        "mucnuocdangbinhthuong": "42.5",
+        "mucnuocdanggiacuong": "43.47",
+        "mucnuocchet": "29.5",
+        "dungtichtoanbo": "32.78",
+        "dungtichmucnuocdangbinhthuong": "32.78",
+        "dungtichhuuich": "28.88",
+        "dungtichchet": "3.9",
+        "tansuatdambaotuoi": null,
+        "tansuatluthietke": "1",
+        "tansuatlukiemtra": "0.2",
+        "luuluongdinhluthietke": "1400",
+        "dientichtuoi": "3700",
+        "namxaydung": "2004",
+        "namhoanthanh": "2004",
+        "namsuachuanangcap": null,
+        "nhiemvu": "",
+        "mucnuoclukiemtra": null,
+        "last_update": "2025-12-07T07:00:00",
+        "tl_dbt": false,
+        "idphanloaihotheonghidinh114": 1,
+        "idphanloaihotheodungtich": 2,
+        "search_content": [
+          {
+            "Text": "dau",
+            "Count": 1
+          },
+          {
+            "Text": "suoi",
+            "Count": 1
+          }
+        ],
+        "tenchuho": null,
+        "sdt_chuho": null,
+        "sdt_trucho": null,
+        "province_id": 511,
+        "has_validated": true,
+        "order_province": 37,
+        "lake_care": false,
+        "dang_xa": null,
+        "luuluong_den": 0.0,
+        "luuluong_xa": 17.27,
+        "thoigian_ghinhan_luuluong": "2025-09-26T07:00:00",
+        "maluuvuc": 11,
+        "lvs": "Sông Nam Bộ",
+        "lng": 109.051213,
+        "lat": 12.154412,
+        "data": [
+          {
+            "id": 3901684,
+            "maho": "8ecdcb6d-7906-4e7f-bc43-1d0168f4f9f8",
+            "tenho": "Suối Dầu (*)",
+            "matinh": "56",
+            "tentinh": "Khánh Hòa",
+            "thoigian": "2025-12-07 07:00:00",
+            "thoigiancapnhat": "2025-12-07 07:00:00",
+            "tddungtich": 25.538002,
+            "tdmucnuoc": 40.2,
+            "difference_mucnuoc": -0.5799999999999983,
+            "update_time": "2025-12-08T07:30:17.332013",
+            "time_convert": "07/12  07:00"
+          }
+        ],
+        "popupInfo": "\n\n<ul class=\"station-popup-info\">\n    <li>Tên hồ: <b>Su&#x1ED1;i D&#x1EA7;u</b></li>\n    <li class=\"hidden\">Mã hồ: <b id=\"idLake\">8ecdcb6d-7906-4e7f-bc43-1d0168f4f9f8</b></li>\n    <li class=\"hidden\">Nguồn: <b id=\"sourceLake\">HTL</b></li>\n    <li>Dung tích toàn bộ: <b>32.78 triệu m<sup>3</sup></b></li>\n    <li>MNTL/MNDBT: <b>40.2/42.5 (m)</b></li>\n    <li>Qđến/Qxả: <b>0/17.27 m3/s</b></li>\n    <li>Thời gian cập nhật lưu lượng: <b>26/09/2025 07:00:00</b></li>\n    <li>Thời gian cập nhật MNTL: <b>07/12  07:00</b></li>\n    <li class='detalRain' data-id='8ecdcb6d-7906-4e7f-bc43-1d0168f4f9f8' onclick=\"detailEVN('8ecdcb6d-7906-4e7f-bc43-1d0168f4f9f8','HTL')\"><a class=\"description-class\">Chi tiết <i class=\"fa fa-caret-right\" aria-hidden=\"true\"></i> </a></li>\n</ul>\n\n"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          106.858235,
+          11.12274
+        ]
+      },
+      "properties": {
+        "maho": "b59b276e-5c66-4136-86e0-9c7739af6736",
+        "tenho": "Đá Bàn",
+        "label": "Đá Bàn",
+        "kinhdo": 106.858235,
+        "vido": 11.12274,
+        "phanloaihotheodungtich": ">10 triệu m3",
+        "phanloaihotheonghidinh114": "Đập, hồ chứa nước lớn",
+        "diadiem": "Ninh Hòa",
+        "matinh": "56",
+        "tentinh": "Khánh Hòa",
+        "capcongtrinh": "Cấp 2",
+        "dientichluuvuc": "126",
+        "mucnuocdangbinhthuong": "63",
+        "mucnuocdanggiacuong": "66.78",
+        "mucnuocchet": "45.2",
+        "dungtichtoanbo": "75",
+        "dungtichmucnuocdangbinhthuong": "75",
+        "dungtichhuuich": "69.8",
+        "dungtichchet": "5.2",
+        "tansuatdambaotuoi": "75",
+        "tansuatluthietke": "0.5",
+        "tansuatlukiemtra": "0.1",
+        "luuluongdinhluthietke": "1650",
+        "dientichtuoi": "7800",
+        "namxaydung": "2012",
+        "namhoanthanh": null,
+        "namsuachuanangcap": null,
+        "nhiemvu": null,
+        "mucnuoclukiemtra": null,
+        "last_update": "2025-12-08T10:35:00",
+        "tl_dbt": false,
+        "idphanloaihotheonghidinh114": 1,
+        "idphanloaihotheodungtich": 2,
+        "search_content": [
+          {
+            "Text": "ban",
+            "Count": 1
+          },
+          {
+            "Text": "da",
+            "Count": 1
+          }
+        ],
+        "tenchuho": null,
+        "sdt_chuho": null,
+        "sdt_trucho": null,
+        "province_id": 511,
+        "has_validated": true,
+        "order_province": 37,
+        "lake_care": false,
+        "dang_xa": null,
+        "luuluong_den": null,
+        "luuluong_xa": 6.13,
+        "thoigian_ghinhan_luuluong": "2025-12-08T07:00:00",
+        "maluuvuc": 14,
+        "lvs": "Sông Đồng Nai",
+        "lng": 106.858235,
+        "lat": 11.12274,
+        "data": [
+          {
+            "id": 3902764,
+            "maho": "b59b276e-5c66-4136-86e0-9c7739af6736",
+            "tenho": "Đá Bàn (*)",
+            "maluuvuc": "11",
+            "tenluuvuc": "Sông Nam Bộ",
+            "matinh": "56",
+            "tentinh": "Khánh Hòa",
+            "thoigian": "2025-12-08 10:35:32",
+            "thoigiancapnhat": "2025-12-08 10:35:32",
+            "tddungtich": 60.8179932,
+            "tdmucnuoc": 60.73,
+            "difference_mucnuoc": 0.0,
+            "update_time": "2025-12-08T10:45:04.803032",
+            "time_convert": "08/12  10:35"
+          }
+        ],
+        "popupInfo": "\n\n<ul class=\"station-popup-info\">\n    <li>Tên hồ: <b>&#x110;&#xE1; B&#xE0;n</b></li>\n    <li class=\"hidden\">Mã hồ: <b id=\"idLake\">b59b276e-5c66-4136-86e0-9c7739af6736</b></li>\n    <li class=\"hidden\">Nguồn: <b id=\"sourceLake\">HTL</b></li>\n    <li>Dung tích toàn bộ: <b>75 triệu m<sup>3</sup></b></li>\n    <li>MNTL/MNDBT: <b>60.73/63 (m)</b></li>\n    <li>Qđến/Qxả: <b><span>_</span>/6.13 m3/s</b></li>\n    <li>Thời gian cập nhật lưu lượng: <b>08/12/2025 07:00:00</b></li>\n    <li>Thời gian cập nhật MNTL: <b>08/12  10:35</b></li>\n    <li class='detalRain' data-id='b59b276e-5c66-4136-86e0-9c7739af6736' onclick=\"detailEVN('b59b276e-5c66-4136-86e0-9c7739af6736','HTL')\"><a class=\"description-class\">Chi tiết <i class=\"fa fa-caret-right\" aria-hidden=\"true\"></i> </a></li>\n</ul>\n\n"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          107.251792,
+          10.556936
+        ]
+      },
+      "properties": {
+        "maho": "34f21bb1-d53f-484e-914c-b8a256cafd33",
+        "tenho": "Đá Bàng",
+        "label": "Đá Bàng",
+        "kinhdo": 107.251792,
+        "vido": 10.556936,
+        "phanloaihotheodungtich": ">10 triệu m3",
+        "phanloaihotheonghidinh114": "Đập, hồ chứa nước lớn",
+        "diadiem": "Huyện Châu Đức và Đất Đỏ",
+        "matinh": "77",
+        "tentinh": "Bà Rịa Vũng Tàu",
+        "capcongtrinh": "Cấp 4",
+        "dientichluuvuc": "24.9",
+        "mucnuocdangbinhthuong": "37.24",
+        "mucnuocdanggiacuong": "38.37",
+        "mucnuocchet": "27",
+        "dungtichtoanbo": "11.35",
+        "dungtichmucnuocdangbinhthuong": "11.35",
+        "dungtichhuuich": "11.05",
+        "dungtichchet": "0.3",
+        "tansuatdambaotuoi": null,
+        "tansuatluthietke": "1.5",
+        "tansuatlukiemtra": "0.5",
+        "luuluongdinhluthietke": null,
+        "dientichtuoi": "1300",
+        "namxaydung": "",
+        "namhoanthanh": null,
+        "namsuachuanangcap": null,
+        "nhiemvu": null,
+        "mucnuoclukiemtra": null,
+        "last_update": "2025-12-05T13:00:00",
+        "tl_dbt": false,
+        "idphanloaihotheonghidinh114": 1,
+        "idphanloaihotheodungtich": 2,
+        "search_content": [
+          {
+            "Text": "bang",
+            "Count": 1
+          },
+          {
+            "Text": "da",
+            "Count": 1
+          }
+        ],
+        "tenchuho": null,
+        "sdt_chuho": null,
+        "sdt_trucho": null,
+        "province_id": 717,
+        "has_validated": true,
+        "order_province": 48,
+        "lake_care": false,
+        "dang_xa": null,
+        "luuluong_den": null,
+        "luuluong_xa": null,
+        "thoigian_ghinhan_luuluong": null,
+        "maluuvuc": 11,
+        "lvs": "Sông Nam Bộ",
+        "lng": 107.251792,
+        "lat": 10.556936,
+        "data": [],
+        "popupInfo": "\n\n<ul class=\"station-popup-info\">\n    <li>Tên hồ: <b>&#x110;&#xE1; B&#xE0;ng</b></li>\n    <li class=\"hidden\">Mã hồ: <b id=\"idLake\">34f21bb1-d53f-484e-914c-b8a256cafd33</b></li>\n    <li class=\"hidden\">Nguồn: <b id=\"sourceLake\">HTL</b></li>\n    <li>Dung tích toàn bộ: <b>11.35 triệu m<sup>3</sup></b></li>\n    <li>MNTL/MNDBT: <b> <span>_</span> /37.24 (m)</b></li>\n    <li>Qđến/Qxả: <b><span>_</span>/<span>_</span> m3/s</b></li>\n    <li>Thời gian cập nhật lưu lượng: <b><span>_</span></b></li>\n    <li>Thời gian cập nhật MNTL: <b> <span>_</span></b></li>\n    <li class='detalRain' data-id='34f21bb1-d53f-484e-914c-b8a256cafd33' onclick=\"detailEVN('34f21bb1-d53f-484e-914c-b8a256cafd33','HTL')\"><a class=\"description-class\">Chi tiết <i class=\"fa fa-caret-right\" aria-hidden=\"true\"></i> </a></li>\n</ul>\n\n"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.34981,
+          18.93797
+        ]
+      },
+      "properties": {
+        "maho": "eb018409-e746-482d-896c-6da56ce79afc",
+        "tenho": "Đá Bàn",
+        "label": "Đá Bàn",
+        "kinhdo": 105.34981,
+        "vido": 18.93797,
+        "phanloaihotheodungtich": "1-10 triệu m3",
+        "phanloaihotheonghidinh114": "Đập, hồ chứa nước vừa",
+        "diadiem": "Bài Sơn",
+        "matinh": "40",
+        "tentinh": "Nghệ An",
+        "capcongtrinh": "Cấp 4",
+        "dientichluuvuc": "2",
+        "mucnuocdangbinhthuong": "38.5",
+        "mucnuocdanggiacuong": null,
+        "mucnuocchet": null,
+        "dungtichtoanbo": "1.153",
+        "dungtichmucnuocdangbinhthuong": "1.05",
+        "dungtichhuuich": null,
+        "dungtichchet": null,
+        "tansuatdambaotuoi": null,
+        "tansuatluthietke": "1.5",
+        "tansuatlukiemtra": null,
+        "luuluongdinhluthietke": null,
+        "dientichtuoi": "100",
+        "namxaydung": "",
+        "namhoanthanh": "",
+        "namsuachuanangcap": null,
+        "nhiemvu": "",
+        "mucnuoclukiemtra": null,
+        "last_update": "2025-08-26T07:00:00",
+        "tl_dbt": false,
+        "idphanloaihotheonghidinh114": 4,
+        "idphanloaihotheodungtich": 1,
+        "search_content": [
+          {
+            "Text": "ban",
+            "Count": 1
+          },
+          {
+            "Text": "da",
+            "Count": 1
+          }
+        ],
+        "tenchuho": null,
+        "sdt_chuho": null,
+        "sdt_trucho": null,
+        "province_id": 403,
+        "has_validated": true,
+        "order_province": 27,
+        "lake_care": false,
+        "dang_xa": null,
+        "luuluong_den": null,
+        "luuluong_xa": 0.0,
+        "thoigian_ghinhan_luuluong": "2024-09-21T07:00:00",
+        "maluuvuc": 7,
+        "lvs": "Sông Cả",
+        "lng": 105.34981,
+        "lat": 18.93797,
+        "data": [],
+        "popupInfo": "\n\n<ul class=\"station-popup-info\">\n    <li>Tên hồ: <b>&#x110;&#xE1; B&#xE0;n</b></li>\n    <li class=\"hidden\">Mã hồ: <b id=\"idLake\">eb018409-e746-482d-896c-6da56ce79afc</b></li>\n    <li class=\"hidden\">Nguồn: <b id=\"sourceLake\">HTL</b></li>\n    <li>Dung tích toàn bộ: <b>1.153 triệu m<sup>3</sup></b></li>\n    <li>MNTL/MNDBT: <b> <span>_</span> /38.5 (m)</b></li>\n    <li>Qđến/Qxả: <b><span>_</span>/0 m3/s</b></li>\n    <li>Thời gian cập nhật lưu lượng: <b>21/09/2024 07:00:00</b></li>\n    <li>Thời gian cập nhật MNTL: <b> <span>_</span></b></li>\n    <li class='detalRain' data-id='eb018409-e746-482d-896c-6da56ce79afc' onclick=\"detailEVN('eb018409-e746-482d-896c-6da56ce79afc','HTL')\"><a class=\"description-class\">Chi tiết <i class=\"fa fa-caret-right\" aria-hidden=\"true\"></i> </a></li>\n</ul>\n\n"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          108.982161,
+          12.231088
+        ]
+      },
+      "properties": {
+        "maho": "bbbd9921-8e77-4f45-80c5-2c7f38aa0bab",
+        "tenho": "Láng Nhớt",
+        "label": "Láng Nhớt",
+        "kinhdo": 108.982161,
+        "vido": 12.231088,
+        "phanloaihotheodungtich": "1-10 triệu m3",
+        "phanloaihotheonghidinh114": "Đập, hồ chứa nước lớn",
+        "diadiem": "Diên Khánh",
+        "matinh": "56",
+        "tentinh": "Khánh Hòa",
+        "capcongtrinh": "Cấp 3",
+        "dientichluuvuc": "14",
+        "mucnuocdangbinhthuong": "46.4",
+        "mucnuocdanggiacuong": "48.2",
+        "mucnuocchet": "38",
+        "dungtichtoanbo": "2.1",
+        "dungtichmucnuocdangbinhthuong": "2.1",
+        "dungtichhuuich": "2.02",
+        "dungtichchet": "0.08",
+        "tansuatdambaotuoi": null,
+        "tansuatluthietke": "1",
+        "tansuatlukiemtra": "0.2",
+        "luuluongdinhluthietke": "186",
+        "dientichtuoi": "220",
+        "namxaydung": "1977",
+        "namhoanthanh": null,
+        "namsuachuanangcap": null,
+        "nhiemvu": null,
+        "mucnuoclukiemtra": null,
+        "last_update": "2025-12-07T07:00:00",
+        "tl_dbt": false,
+        "idphanloaihotheonghidinh114": 1,
+        "idphanloaihotheodungtich": 1,
+        "search_content": [
+          {
+            "Text": "lang",
+            "Count": 1
+          },
+          {
+            "Text": "nhot",
+            "Count": 1
+          }
+        ],
+        "tenchuho": null,
+        "sdt_chuho": null,
+        "sdt_trucho": null,
+        "province_id": 511,
+        "has_validated": true,
+        "order_province": 37,
+        "lake_care": false,
+        "dang_xa": null,
+        "luuluong_den": null,
+        "luuluong_xa": 0.0,
+        "thoigian_ghinhan_luuluong": "2025-09-09T07:00:00",
+        "maluuvuc": 11,
+        "lvs": "Sông Nam Bộ",
+        "lng": 108.982161,
+        "lat": 12.231088,
+        "data": [
+          {
+            "id": 3901636,
+            "maho": "bbbd9921-8e77-4f45-80c5-2c7f38aa0bab",
+            "tenho": "Láng Nhớt (*)",
+            "matinh": "56",
+            "tentinh": "Khánh Hòa",
+            "thoigian": "2025-12-07 07:00:00",
+            "thoigiancapnhat": "2025-12-07 07:00:00",
+            "tddungtich": 1.95199955,
+            "tdmucnuoc": 46.28,
+            "difference_mucnuoc": 0.23000000000000398,
+            "update_time": "2025-12-08T07:30:06.963052",
+            "time_convert": "07/12  07:00"
+          }
+        ],
+        "popupInfo": "\n\n<ul class=\"station-popup-info\">\n    <li>Tên hồ: <b>L&#xE1;ng Nh&#x1EDB;t</b></li>\n    <li class=\"hidden\">Mã hồ: <b id=\"idLake\">bbbd9921-8e77-4f45-80c5-2c7f38aa0bab</b></li>\n    <li class=\"hidden\">Nguồn: <b id=\"sourceLake\">HTL</b></li>\n    <li>Dung tích toàn bộ: <b>2.1 triệu m<sup>3</sup></b></li>\n    <li>MNTL/MNDBT: <b>46.28/46.4 (m)</b></li>\n    <li>Qđến/Qxả: <b><span>_</span>/0 m3/s</b></li>\n    <li>Thời gian cập nhật lưu lượng: <b>09/09/2025 07:00:00</b></li>\n    <li>Thời gian cập nhật MNTL: <b>07/12  07:00</b></li>\n    <li class='detalRain' data-id='bbbd9921-8e77-4f45-80c5-2c7f38aa0bab' onclick=\"detailEVN('bbbd9921-8e77-4f45-80c5-2c7f38aa0bab','HTL')\"><a class=\"description-class\">Chi tiết <i class=\"fa fa-caret-right\" aria-hidden=\"true\"></i> </a></li>\n</ul>\n\n"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          109.287171,
+          12.799537
+        ]
+      },
+      "properties": {
+        "maho": "8c7a4601-2b94-460c-ab67-8cbdec8d9232",
+        "tenho": "Hoa Sơn",
+        "label": "Hoa Sơn",
+        "kinhdo": 109.287171,
+        "vido": 12.799537,
+        "phanloaihotheodungtich": ">10 triệu m3",
+        "phanloaihotheonghidinh114": "Đập, hồ chứa nước lớn",
+        "diadiem": "Vạn Ninh",
+        "matinh": "56",
+        "tentinh": "Khánh Hòa",
+        "capcongtrinh": "Cấp 3",
+        "dientichluuvuc": "44",
+        "mucnuocdangbinhthuong": "26.5",
+        "mucnuocdanggiacuong": "27.48",
+        "mucnuocchet": "10.5",
+        "dungtichtoanbo": "19.18",
+        "dungtichmucnuocdangbinhthuong": "19.18",
+        "dungtichhuuich": "17.6",
+        "dungtichchet": "1.58",
+        "tansuatdambaotuoi": null,
+        "tansuatluthietke": "1",
+        "tansuatlukiemtra": "0.2",
+        "luuluongdinhluthietke": "963",
+        "dientichtuoi": "1360",
+        "namxaydung": "2010",
+        "namhoanthanh": null,
+        "namsuachuanangcap": null,
+        "nhiemvu": null,
+        "mucnuoclukiemtra": null,
+        "last_update": "2025-12-08T07:00:00",
+        "tl_dbt": false,
+        "idphanloaihotheonghidinh114": 1,
+        "idphanloaihotheodungtich": 2,
+        "search_content": [
+          {
+            "Text": "hoa",
+            "Count": 1
+          },
+          {
+            "Text": "son",
+            "Count": 1
+          }
+        ],
+        "tenchuho": null,
+        "sdt_chuho": null,
+        "sdt_trucho": null,
+        "province_id": 511,
+        "has_validated": true,
+        "order_province": 37,
+        "lake_care": false,
+        "dang_xa": null,
+        "luuluong_den": 7.661,
+        "luuluong_xa": 0.0,
+        "thoigian_ghinhan_luuluong": "2025-12-08T07:00:00",
+        "maluuvuc": 11,
+        "lvs": "Sông Nam Bộ",
+        "lng": 109.287171,
+        "lat": 12.799537,
+        "data": [
+          {
+            "id": 3901743,
+            "maho": "8c7a4601-2b94-460c-ab67-8cbdec8d9232",
+            "tenho": "Hoa Sơn (*)",
+            "matinh": "56",
+            "tentinh": "Khánh Hòa",
+            "thoigian": "2025-12-08 07:00:00",
+            "thoigiancapnhat": "2025-12-08 07:00:00",
+            "tddungtich": 14.92,
+            "tdmucnuoc": 23.4,
+            "difference_mucnuoc": 0.29999999999999716,
+            "update_time": "2025-12-08T08:00:34.456095",
+            "time_convert": "08/12  07:00"
+          }
+        ],
+        "popupInfo": "\n\n<ul class=\"station-popup-info\">\n    <li>Tên hồ: <b>Hoa S&#x1A1;n</b></li>\n    <li class=\"hidden\">Mã hồ: <b id=\"idLake\">8c7a4601-2b94-460c-ab67-8cbdec8d9232</b></li>\n    <li class=\"hidden\">Nguồn: <b id=\"sourceLake\">HTL</b></li>\n    <li>Dung tích toàn bộ: <b>19.18 triệu m<sup>3</sup></b></li>\n    <li>MNTL/MNDBT: <b>23.4/26.5 (m)</b></li>\n    <li>Qđến/Qxả: <b>7.661/0 m3/s</b></li>\n    <li>Thời gian cập nhật lưu lượng: <b>08/12/2025 07:00:00</b></li>\n    <li>Thời gian cập nhật MNTL: <b>08/12  07:00</b></li>\n    <li class='detalRain' data-id='8c7a4601-2b94-460c-ab67-8cbdec8d9232' onclick=\"detailEVN('8c7a4601-2b94-460c-ab67-8cbdec8d9232','HTL')\"><a class=\"description-class\">Chi tiết <i class=\"fa fa-caret-right\" aria-hidden=\"true\"></i> </a></li>\n</ul>\n\n"
+      }
+    }
+  ]
+}
