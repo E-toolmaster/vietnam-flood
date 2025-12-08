@@ -636,15 +636,15 @@ export default function FloodMonitor() {
               </div>
               <div className="divide-y divide-slate-100 max-h-[300px] overflow-y-auto">
                 {alerts.slice(0, 8).map((news, i) => (
-                  <a key={i} href={news.link} target="_blank" className={`block p-3 transition-colors
-                     ${news.is_urgent ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-blue-50'}`}>
-                    <div className="flex gap-2">
+                  <a key={i} href={news.link} target="_blank" rel="noreferrer" className="block p-3 transition-colors hover:bg-blue-50 group">
+                    <div className="flex gap-3">
+                      {/* Icon dấu chấm đơn giản cho mọi tin */}
                       <div className="mt-1 shrink-0">
-                         {news.is_urgent ? <AlertTriangle size={14} className="text-red-600 animate-pulse" /> : <div className="w-3 h-3 rounded-full bg-blue-200 mt-0.5"></div>}
+                         <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 group-hover:bg-blue-600 transition-colors"></div>
                       </div>
                       <div>
-                        <div className={`text-xs font-medium leading-snug ${news.is_urgent ? 'text-red-700 font-bold' : 'text-slate-700'}`}>
-                          {!!news.is_urgent && <span className="inline-block bg-red-600 text-white text-[9px] px-1 rounded mr-1">CẢNH BÁO</span>}
+                        {/* Title đồng màu */}
+                        <div className="text-xs font-medium leading-snug text-slate-700 group-hover:text-blue-700 transition-colors">
                           {news.title}
                         </div>
                         <div className="text-[10px] text-slate-400 mt-1">{news.time_crawled}</div>
