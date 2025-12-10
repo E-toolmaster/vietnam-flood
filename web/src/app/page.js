@@ -5,43 +5,96 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid
 } from 'recharts';
 import {
-  Droplets, CloudRain, AlertTriangle, Menu, X, 
+  Droplets, CloudRain, AlertTriangle, Menu, X, CheckCircle,
   ExternalLink, Waves, ShieldAlert, MapPin, Clock, Activity, FileText
 } from 'lucide-react';
 
-
 // === CẤU HÌNH LOGIC DỰ BÁO ===
-const FLOOD_ZONES = [
-  {
-    threshold: 8.0, // BĐ1
-    type: 'river',
-    level: 'warning',
-    title: 'Nguy cơ ngập cục bộ',
-    areas: ['Khu vực bãi bồi ven sông', 'Cồn Dê', 'Cồn Ngọc Thảo', 'Đường mép sông Vĩnh Ngọc']
-  },
-  {
-    threshold: 9.5, // BĐ2
-    type: 'river',
-    level: 'danger',
-    title: 'Ngập lụt diện rộng (Tương đương 2021)',
-    areas: ['Xã Vĩnh Phương', 'Xã Vĩnh Ngọc', 'Xã Vĩnh Trung (vùng thấp)', 'Đường 23/10 (đoạn Cầu Dứa)', 'Khu vực Tháp Bà']
-  },
-  {
-    threshold: 11.0, // BĐ3
-    type: 'river',
-    level: 'critical',
-    title: 'KHẨN CẤP: Ngập sâu nguy hiểm (Đỉnh lũ 2025)',
-    areas: ['Toàn bộ xã Vĩnh Thạnh', 'Phường Ngọc Hiệp', 'Khu vực Chợ Đầm', 'Trung tâm TP (vùng trũng)', 'Cô lập hoàn toàn các xã ven sông']
-  },
-  {
-    threshold: 150, // Mưa > 150mm
-    type: 'rain',
-    level: 'warning',
-    title: 'Cảnh báo sạt lở đất & Lũ quét',
-    areas: ['Đèo Khánh Lê (QL27C)', 'Huyện Khánh Vĩnh', 'Vùng núi Cam Lâm']
-  }
-];
 
+// MAP ĐỊA GIỚI HÀNH CHÍNH CHUẨN (Quy hoạch mới TP. Nha Trang + Vùng lân cận)
+const ZONE_MAP = {
+  // --- TP. NHA TRANG (4 Phường lớn sau sáp nhập) ---
+  
+  // 1. TÂY NHA TRANG (Vùng ven sông Cái - Rủi ro ngập cao nhất)
+  // Gồm: Ngọc Hiệp, Phương Sài + xã Vĩnh Ngọc, Vĩnh Thạnh, Vĩnh Hiệp, Vĩnh Trung
+  'Vĩnh Ngọc': 'Tây Nha Trang',
+  'Vĩnh Thạnh': 'Tây Nha Trang',
+  'Vĩnh Hiệp': 'Tây Nha Trang',
+  'Vĩnh Trung': 'Tây Nha Trang',
+  'Ngọc Hiệp': 'Tây Nha Trang',
+  'Phương Sài': 'Tây Nha Trang',
+
+  // 2. BẮC NHA TRANG (Vùng phía Bắc)
+  // Gồm: Vĩnh Hòa, Vĩnh Hải, Vĩnh Phước, Vĩnh Thọ + xã Vĩnh Lương, Vĩnh Phương
+  'Vĩnh Lương': 'Bắc Nha Trang',
+  'Vĩnh Phương': 'Bắc Nha Trang',
+  'Vĩnh Hòa': 'Bắc Nha Trang',
+  'Vĩnh Hải': 'Bắc Nha Trang',
+  'Vĩnh Phước': 'Bắc Nha Trang',
+  'Vĩnh Thọ': 'Bắc Nha Trang',
+
+  // 3. NAM NHA TRANG (Vùng phía Nam - Cửa sông & Vùng trũng)
+  // Gồm: Phước Hải, Phước Long, Vĩnh Trường + xã Phước Đồng, Vĩnh Thái
+  'Phước Đồng': 'Nam Nha Trang',
+  'Vĩnh Thái': 'Nam Nha Trang',
+  'Phước Long': 'Nam Nha Trang',
+  'Vĩnh Trường': 'Nam Nha Trang',
+  'Phước Hải': 'Nam Nha Trang',
+
+  // 4. TRUNG TÂM NHA TRANG (Phường Nha Trang mới)
+  // Gồm: Vạn Thạnh, Lộc Thọ, Vĩnh Nguyên, Tân Tiến, Phước Hòa
+  'Lộc Thọ': 'Trung Tâm Nha Trang',
+  'Vạn Thạnh': 'Trung Tâm Nha Trang',
+  'Tân Tiến': 'Trung Tâm Nha Trang',
+  'Phước Hòa': 'Trung Tâm Nha Trang',
+  'Vĩnh Nguyên': 'Trung Tâm Nha Trang',
+
+  // --- HUYỆN DIÊN KHÁNH (Vùng tiếp giáp phía Tây - Thượng nguồn sông Cái) ---
+  'Diên Khánh': 'H. Diên Khánh', // Thị trấn
+  'Diên An': 'H. Diên Khánh',
+  'Diên Toàn': 'H. Diên Khánh',
+  'Diên Thạnh': 'H. Diên Khánh',
+  'Diên Lạc': 'H. Diên Khánh',
+  'Diên Phú': 'H. Diên Khánh',
+  'Diên Điền': 'H. Diên Khánh', // Hay ngập
+  'Diên Sơn': 'H. Diên Khánh',  // Hay ngập
+  'Suối Hiệp': 'H. Diên Khánh',
+
+  // --- HUYỆN KHÁNH VĨNH (Vùng núi - Đầu nguồn lũ) ---
+  'Khánh Vĩnh': 'H. Khánh Vĩnh',
+  'Khánh Hiệp': 'H. Khánh Vĩnh',
+  'Khánh Đông': 'H. Khánh Vĩnh',
+  'Giang Ly': 'H. Khánh Vĩnh',
+  'Sông Cầu': 'H. Khánh Vĩnh',
+};
+
+// Hàm helper để gom nhóm địa điểm
+const groupLocations = (stationNames) => {
+  if (!stationNames || stationNames.length === 0) return '';
+  
+  let zones = new Set();
+  let unknown = [];
+
+  stationNames.forEach(name => {
+    let found = false;
+    for (const [key, zone] of Object.entries(ZONE_MAP)) {
+      if (name.includes(key)) {
+        zones.add(zone);
+        found = true;
+        break;
+      }
+    }
+    if (!found) unknown.push(name);
+  });
+
+  const zoneList = Array.from(zones);
+  
+  if (zoneList.length > 0) {
+    return zoneList.join(', ') + (unknown.length > 0 ? `, ${unknown.slice(0,2).join(', ')}...` : '');
+  }
+  
+  return unknown.slice(0, 3).join(', ');
+};
 
 export default function FloodMonitor() {
   const [monitorData, setMonitorData] = useState(null);
@@ -51,16 +104,14 @@ export default function FloodMonitor() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
 
-
   // Fetch data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Thêm timestamp để lừa browser không cache URL
         const t = new Date().getTime(); 
         const res = await fetch(`/api/alerts?t=${t}`, {
-            cache: 'no-store', // Bắt buộc fetch mới
-            next: { revalidate: 0 } // Chỉ thị cho Next.js
+            cache: 'no-store',
+            next: { revalidate: 0 }
         });
         
         if (!res.ok) throw new Error('Network response was not ok');
@@ -84,7 +135,6 @@ export default function FloodMonitor() {
     return () => { clearInterval(interval); clearInterval(timer); };
   }, []);
 
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
@@ -96,47 +146,33 @@ export default function FloodMonitor() {
     );
   }
 
-
   // --- HELPERS & LOGIC ---
   const riverLevel = monitorData?.river?.current || 0;
   const isEstimated = monitorData?.river?.is_estimated === 1;
 
-  const rain3day = monitorData?.rain?.rain_3day || [0, 0, 0];
-  const rain3daySum = rain3day.reduce((a, b) => a + b, 0);
-  const rainStations = monitorData?.rain_stations || [];
+  // XỬ LÝ DỮ LIỆU MƯA THƯỢNG NGUỒN (Lấy từ description hoặc history_json)
+  const rainStationList = monitorData?.rain_stations || [];
+
+  const rainDesc = monitorData?.rain?.rain_3day || [0, 0, 0];
+  const rainToday = rainDesc[2] || 0; 
+  const rain3daySum = rainDesc.reduce((a, b) => a + b, 0);
+
+  // Tạo data cho biểu đồ cột
+  const chartData = [
+    { name: 'Hôm kia', value: rainDesc[0] || 0 },
+    { name: 'Hôm qua', value: rainDesc[1] || 0 },
+    { name: 'Hôm nay', value: rainToday }
+  ];
 
   const riverUpdated = monitorData?.river?.updated || '';
-  const riverSource = monitorData?.river?.source_link || '';
   const riverDescription = monitorData?.river?.description || '';
   const riverHistory = monitorData?.river?.history || [];
-
-  // Hồ chứa theo metrics
-  const daBan = monitorData?.ho_da_ban || null;
-  const suoiDau = monitorData?.ho_suoi_dau || null;
-  const camRanh = monitorData?.ho_cam_ranh || null;
-  const eaKrongRou = monitorData?.ho_ea_krong_rou || null;
-
-  const formatDischarge = (lakeMetric) => {
-    if (!lakeMetric) return { text: 'Chưa có dữ liệu', value: 0, hasFreshQ: false };
-    const hasFreshQ = lakeMetric.q_out != null;
-    const value = lakeMetric.q_out ?? 0;
-    return {
-      text: hasFreshQ ? `${(lakeMetric.q_out || 0).toFixed(2)} m³/s` : 'Chưa ghi nhận lưu lượng xả',
-      value,
-      hasFreshQ,
-      levelNow: lakeMetric.level_now,
-      volumeNow: lakeMetric.volume_now,
-      desc: lakeMetric.description || '',
-    };
-  };
-
 
   // Xác định trạng thái nguy hiểm
   let dangerLevel = 0;
   if (riverLevel >= 11.0) dangerLevel = 3;
   else if (riverLevel >= 9.5) dangerLevel = 2;
   else if (riverLevel >= 8.0) dangerLevel = 1;
-
 
   // Theme màu theo trạng thái
   const theme = {
@@ -148,21 +184,100 @@ export default function FloodMonitor() {
         : 'from-blue-600 via-blue-500 to-blue-700',
   };
 
+  // --- SMART FORECAST LOGIC (UPDATED) ---
+  const analyzeRisk = () => {
+    let risks = [];
+    let riskLevel = 0; // 0: An toàn, 1: Chú ý, 2: Cảnh báo, 3: Nguy hiểm
 
-  // Logic Dự báo điểm ngập
-  const activeForecasts = FLOOD_ZONES.filter(zone => {
-    if (zone.type === 'river') return riverLevel >= zone.threshold;
-    if (zone.type === 'rain') return rain3daySum >= zone.threshold;
-    return false;
-  }).sort((a, b) => b.threshold - a.threshold);
+    // 1. Check mưa cục bộ (Ngập lụt đô thị)
+    const heavyRainStations = rainStationList.filter(s => s.mm >= 50);
+    const moderateRainStations = rainStationList.filter(s => s.mm >= 25 && s.mm < 50);
 
+    if (heavyRainStations.length > 0) {
+      const affectedZones = groupLocations(heavyRainStations.map(s => s.station_name));
+      risks.push({
+        type: 'local_flood',
+        level: 'high',
+        title: 'Ngập úng cục bộ',
+        desc: `Mưa rất to (>50mm). Nguy cơ ngập sâu các tuyến đường thấp trũng.`,
+        locations: affectedZones // VD: Nam Nha Trang, H. Diên Khánh
+      });
+      riskLevel = Math.max(riskLevel, 2);
+    } 
+    else if (moderateRainStations.length > 3) {
+      const affectedZones = groupLocations(moderateRainStations.map(s => s.station_name));
+      risks.push({
+        type: 'rain_wide',
+        level: 'medium',
+        title: 'Mưa diện rộng',
+        desc: 'Mưa rải rác nhiều nơi. Đường trơn trượt, hạn chế tầm nhìn.',
+        locations: affectedZones
+      });
+      riskLevel = Math.max(riskLevel, 1);
+    }
 
-  const chartData = [
-    { name: 'Hôm kia', value: rain3day[0] },
-    { name: 'Hôm qua', value: rain3day[1] },
-    { name: 'Hôm nay', value: rain3day[2] },
-  ];
+    // 2. Check Mưa Thượng Nguồn -> Cảnh báo Lũ về Hạ Du (Tây Nha Trang)
+    let upstreamStations = [];
+    try { upstreamStations = JSON.parse(monitorData?.Du_Lieu_Thuong_Nguon?.history_json || '[]'); } catch(e){}
+    
+    // Tính max mưa hôm nay ở đầu nguồn
+    const maxUpstreamToday = Math.max(...upstreamStations.map(s => s.today), 0);
 
+    if (maxUpstreamToday > 100) {
+      risks.push({
+        type: 'flash_flood',
+        level: 'high',
+        title: 'Cảnh báo lũ về hạ du',
+        desc: `Mưa thượng nguồn rất lớn (${maxUpstreamToday.toFixed(0)}mm). Nước sông Cái sẽ lên nhanh, gây ngập vùng ven sông.`,
+        locations: 'Tây Nha Trang, H. Diên Khánh' 
+      });
+      riskLevel = Math.max(riskLevel, 3);
+    } else if (maxUpstreamToday > 50) {
+       risks.push({
+        type: 'flash_flood_warn',
+        level: 'medium',
+        title: 'Mưa lớn đầu nguồn',
+        desc: `Đầu nguồn đang mưa to. Cần theo dõi sát mực nước sông Cái.`,
+        locations: 'Tây Nha Trang'
+      });
+      riskLevel = Math.max(riskLevel, 2);
+    }
+
+    // 3. Check Hồ xả lũ
+    const reservoirs = Object.values(monitorData).filter(v => v.type === 'reservoir');
+    const discharging = reservoirs.filter(r => r.q_out > 50); 
+    if (discharging.length > 0) {
+       risks.push({
+        type: 'discharge',
+        level: 'high',
+        title: 'Hồ chứa xả lũ lớn',
+        desc: `${discharging.length} hồ xả >50m³/s. Nguy cơ ngập vùng trũng ven sông Cái.`,
+        locations: 'H. Diên Khánh, Tây Nha Trang'
+      });
+      riskLevel = Math.max(riskLevel, 3);
+    }
+
+    // 4. Check Lũ Sông Cái thực tế
+    if (riverLevel > 11.0) { // BĐ3
+       risks.push({
+        type: 'river_flood_3', level: 'high', title: 'Lũ khẩn cấp (Trên BĐ3)',
+        desc: `Nước sông rất cao (${riverLevel}m). Ngập lụt nghiêm trọng diện rộng.`,
+        locations: 'Tây Nha Trang, H. Diên Khánh'
+      });
+      riskLevel = 3;
+    } else if (riverLevel > 9.5) { // BĐ2
+       risks.push({
+        type: 'river_flood_2', level: 'high', title: 'Lũ báo động 2',
+        desc: `Nước sông dâng cao (${riverLevel}m). Ngập lụt vùng ven sông.`,
+        locations: 'Tây Nha Trang (Vĩnh Ngọc, Vĩnh Thạnh)'
+      });
+      riskLevel = Math.max(riskLevel, 2);
+    }
+
+    return { risks, riskLevel };
+  };
+
+  const { risks, riskLevel } = analyzeRisk();
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-900 pb-10">
@@ -191,7 +306,6 @@ export default function FloodMonitor() {
         </div> 
       </header>
 
-
       {/* --- MAIN CONTENT --- */}
       <main className="max-w-5xl mx-auto px-4 mt-4 relative z-10 space-y-6">
         
@@ -201,7 +315,6 @@ export default function FloodMonitor() {
           <span>Hệ thống tự động cập nhật chỉ số mỗi 15 phút từ các trạm đo & vệ tinh.</span>
         </div>
 
-
         {/* 2. HERO DASHBOARD (SÔNG + MƯA) */}
         <div className={`rounded-2xl shadow-xl overflow-hidden text-white bg-gradient-to-br ${theme.heroGradient} transition-all duration-700`}>
           <div className="p-6 md:p-8 grid md:grid-cols-2 gap-10 items-center relative">
@@ -209,7 +322,6 @@ export default function FloodMonitor() {
             <div className="absolute top-0 right-0 opacity-10 pointer-events-none">
                <Waves size={300} />
             </div>
-
 
             {/* --- CỘT TRÁI: MỰC NƯỚC --- */}
             <div className="relative z-10">
@@ -233,16 +345,13 @@ export default function FloodMonitor() {
                 </div>
               </div>
 
-
               {/* THÔNG TIN NGUỒN & THỜI GIAN CẬP NHẬT */}
               {isEstimated ? (
                 <div className="bg-yellow-300/20 border border-yellow-300/50 rounded-lg p-3 mb-6 backdrop-blur-sm">
                   <div className="flex items-start gap-3">
                     <AlertTriangle size={20} className="text-yellow-300 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-xs font-bold text-yellow-200 uppercase mb-1">
-                        DỮ LIỆU DỰ ĐOÁN
-                      </p>
+                      <p className="text-xs font-bold text-yellow-200 uppercase mb-1">DỮ LIỆU DỰ ĐOÁN</p>
                       <p className="text-[11px] leading-relaxed text-white/90">
                         Mực nước được ước tính từ lượng mưa đầu nguồn và mô hình kinh nghiệm.
                         <br />
@@ -258,84 +367,46 @@ export default function FloodMonitor() {
                     <span className="font-semibold">DỮ LIỆU QUAN TRẮC THỰC TẾ</span>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-white/80">
-                    <span>
-                      Nguồn: Hệ thống giám sát mực nước VNDMS (trạm Đồng Trăng).
-                    </span>
+                    <span>Nguồn: Hệ thống giám sát mực nước VNDMS (trạm Đồng Trăng).</span>
                     {riverUpdated && (
                       <span className="inline-flex items-center gap-1">
-                        <Clock size={11} />
-                        Cập nhật: {riverUpdated}
+                        <Clock size={11} /> Cập nhật: {riverUpdated}
                       </span>
                     )}
-                    
                   </div>
-                  {riverDescription && (
-                    <p className="text-[10px] text-white/70 mt-1">
-                      {riverDescription}
-                    </p>
-                  )}
+                  {riverDescription && <p className="text-[10px] text-white/70 mt-1">{riverDescription}</p>}
                 </div>
               )}
 
-
               {/* Thanh đo trực quan */}
-              <div className="relative w-full mb-8 mt-4 px-1"> {/* Thêm padding xíu để text đỡ bị cắt lề */}
-                 
-                 {/* Container nền */}
+              <div className="relative w-full mb-8 mt-4 px-1"> 
                  <div className="w-full bg-black/30 h-4 rounded-full overflow-hidden relative border border-white/10">
-                    
-                    {/* VẠCH BÁO ĐỘNG (Dùng style left chính xác) */}
-                    
-                    {/* BĐ1: 8.0m -> 61.77% */}
-                    <div className="absolute top-0 bottom-0 w-[2px] bg-yellow-400 z-30 shadow-[0_0_8px_rgba(250,204,21,1)]" 
-                         style={{ left: '61.77%' }} 
-                         title="Báo động 1: 8.0m"></div>
-                    
-                    {/* BĐ2: 9.5m -> 73.36% */}
-                    <div className="absolute top-0 bottom-0 w-[2px] bg-orange-500 z-30 shadow-[0_0_8px_rgba(249,115,22,1)]" 
-                         style={{ left: '73.36%' }} 
-                         title="Báo động 2: 9.5m"></div>
-                    
-                    {/* BĐ3: 11.0m -> 84.94% */}
-                    <div className="absolute top-0 bottom-0 w-[2px] bg-red-600 z-30 shadow-[0_0_8px_rgba(220,38,38,1)] animate-pulse" 
-                         style={{ left: '84.94%' }} 
-                         title="Báo động 3: 11.0m"></div>
+                    <div className="absolute top-0 bottom-0 w-[2px] bg-yellow-400 z-30 shadow-[0_0_8px_rgba(250,204,21,1)]" style={{ left: '61.77%' }} title="Báo động 1: 8.0m"></div>
+                    <div className="absolute top-0 bottom-0 w-[2px] bg-orange-500 z-30 shadow-[0_0_8px_rgba(249,115,22,1)]" style={{ left: '73.36%' }} title="Báo động 2: 9.5m"></div>
+                    <div className="absolute top-0 bottom-0 w-[2px] bg-red-600 z-30 shadow-[0_0_8px_rgba(220,38,38,1)] animate-pulse" style={{ left: '84.94%' }} title="Báo động 3: 11.0m"></div>
 
-                    {/* THANH MỰC NƯỚC HIỆN TẠI (Max 12.95) */}
                     <div 
-                      className={`h-full transition-all duration-1000 ease-out relative 
-                        ${dangerLevel >= 2 ? 'bg-gradient-to-r from-orange-500 to-red-600' : 'bg-gradient-to-r from-cyan-400 to-green-400'}`}
+                      className={`h-full transition-all duration-1000 ease-out relative ${dangerLevel >= 2 ? 'bg-gradient-to-r from-orange-500 to-red-600' : 'bg-gradient-to-r from-cyan-400 to-green-400'}`}
                       style={{ width: `${Math.min((riverLevel / 12.95) * 100, 100)}%` }} 
                     >
-                        {/* Hiệu ứng đầu thanh */}
                         <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-white shadow-[0_0_10px_white]"></div>
                     </div>
                  </div>
                  
-                 {/* LABEL MỐC (Căn chỉnh tuyệt đối - translate-x-1/2 để tâm chữ trùng vạch) */}
                  <div className="relative h-6 text-[9px] font-mono font-bold mt-1.5 select-none w-full">
-                    {/* 0m */}
                     <span className="absolute left-0 text-white/50 -translate-x-1/4">0m</span>
-                    
-                    {/* BĐ1 */}
                     <div className="absolute flex flex-col items-center gap-0.5 -translate-x-1/2" style={{ left: '61.77%' }}>
                         <span className="text-yellow-300 leading-none">BĐ1</span>
                         <span className="text-yellow-300/50 text-[8px] leading-none">8.0</span>
                     </div>
-
-                    {/* BĐ2 */}
                     <div className="absolute flex flex-col items-center gap-0.5 -translate-x-1/2" style={{ left: '73.36%' }}>
                         <span className="text-orange-300 leading-none">BĐ2</span>
                         <span className="text-orange-300/50 text-[8px] leading-none">9.5</span>
                     </div>
-
-                    {/* BĐ3 */}
                     <div className="absolute flex flex-col items-center gap-0.5 -translate-x-1/2" style={{ left: '84.94%' }}>
                         <span className="text-red-400 leading-none">BĐ3</span>
                         <span className="text-red-400/50 text-[8px] leading-none">11.0</span>
                     </div>
-
-                    {/* MAX (Canh phải) */}
                     <div className="absolute right-0 flex flex-col items-end gap-0.5 translate-x-1/4">
                         <span className="text-white/60 leading-none">Đỉnh lũ 2025</span>
                         <span className="text-white/40 text-[8px] leading-none">12.95m</span>
@@ -343,52 +414,23 @@ export default function FloodMonitor() {
                  </div>
               </div>
               
-              {/* Biểu đồ mực nước gần đây */}
+              {/* Biểu đồ mực nước */}
               {riverHistory.length > 0 && (
                 <div className="mt-4 bg-black/10 rounded-lg p-3 border border-white/10">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[11px] font-semibold text-white/80 flex items-center gap-1">
-                      <Waves size={12} />
-                      Diễn biến mực nước gần đây
+                      <Waves size={12} /> Diễn biến mực nước
                     </span>
-                    {riverUpdated && (
-                      <span className="text-[10px] text-white/60">
-                        Cập nhật: {riverUpdated}
-                      </span>
-                    )}
+                    {riverUpdated && <span className="text-[10px] text-white/60">Cập nhật: {riverUpdated}</span>}
                   </div>
                   <div className="h-24 w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={riverHistory}>
                         <CartesianGrid stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
-                        <XAxis
-                          dataKey="time"
-                          tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.8)' }}
-                          tickLine={false}
-                        />
-                        <YAxis
-                          domain={['auto', 'auto']}
-                          tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.8)' }}
-                          width={30}
-                        />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: '#020617',
-                            border: '1px solid rgba(148,163,184,0.5)',
-                            fontSize: 11,
-                          }}
-                          labelStyle={{ color: '#e5e7eb' }}
-                          formatter={(val) => [`${val} m`, 'Mực nước']}
-                          labelFormatter={(label) => `Giờ: ${label}`}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="value"
-                          stroke="#ffffff"
-                          strokeWidth={2}
-                          dot={{ r: 2, strokeWidth: 0 }}
-                          activeDot={{ r: 4 }}
-                        />
+                        <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.8)' }} tickLine={false} />
+                        <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.8)' }} width={30} />
+                        <Tooltip contentStyle={{ backgroundColor: '#020617', border: '1px solid rgba(148,163,184,0.5)', fontSize: 11 }} labelStyle={{ color: '#e5e7eb' }} formatter={(val) => [`${val} m`, 'Mực nước']} labelFormatter={(label) => `Giờ: ${label}`} />
+                        <Line type="monotone" dataKey="value" stroke="#ffffff" strokeWidth={2} dot={{ r: 2, strokeWidth: 0 }} activeDot={{ r: 4 }} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -396,111 +438,135 @@ export default function FloodMonitor() {
               )}
             </div>
 
-
-            {/* --- CỘT PHẢI: MƯA TÍCH LŨY --- */}
-            <div className="relative z-10 bg-white/10 p-5 rounded-xl border border-white/10 backdrop-blur-sm">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <div className="flex items-center gap-2 opacity-90 mb-1">
-                    <CloudRain size={18} />
-                    <span className="uppercase text-sm font-bold tracking-widest">Mưa 3 Ngày</span>
-                  </div>
-                  <div className="text-3xl font-bold">{rain3daySum.toFixed(1)} <span className="text-base font-normal">mm</span></div>
-                </div>
-                <div className="text-right text-xs opacity-70">
-                  Tại các trạm đo<br/>Khánh Vĩnh
-                </div>
+            {/* --- CỘT PHẢI: MƯA THƯỢNG NGUỒN --- */}
+            <div className="relative z-10 bg-white/10 p-5 rounded-xl border border-white/10 backdrop-blur-sm h-full flex flex-col">
+              <div className="flex items-center gap-2 opacity-90 mb-4 border-b border-white/10 pb-2">
+                <CloudRain size={18} className="text-cyan-300" />
+                <span className="uppercase text-sm font-bold tracking-widest text-cyan-100">
+                  Mưa Thượng Nguồn
+                </span>
               </div>
 
+              <div className="flex-1 overflow-y-auto pr-1 space-y-3 custom-scrollbar">
+                {(() => {
+                  let stations = [];
+                  try {
+                    const rawJson = monitorData?.Du_Lieu_Thuong_Nguon?.history_json;
+                    if (rawJson) stations = JSON.parse(rawJson);
+                  } catch (e) { stations = []; }
 
-              {/* Chart Mini */}
-              <div className="h-32 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData}>
-                    <Bar dataKey="value" radius={[4, 4, 4, 4]}>
-                      {chartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.value > 100 ? '#ffffff' : 'rgba(255,255,255,0.6)'} />
-                      ))}
-                    </Bar>
-                    <Tooltip 
-                      cursor={{fill: 'transparent'}}
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          return (
-                            <div className="bg-slate-800 text-white text-xs p-2 rounded shadow-lg border-none">
-                              {payload[0].value} mm
+                  if (stations.length === 0) return <div className="text-sm opacity-50">Đang cập nhật dữ liệu...</div>;
+
+                  return stations.map((st, idx) => {
+                    const lv = st.level ? st.level.toLowerCase() : '';
+                    let statusColor = 'bg-slate-700/50 text-slate-300 border-slate-600';
+                    if (lv.includes('vừa')) statusColor = 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30';
+                    if (lv.includes('to') || lv.includes('lớn')) statusColor = 'bg-red-500/20 text-red-300 border-red-500/30';
+                    if (lv.includes('nhỏ') || lv.includes('nho')) statusColor = 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+
+                    return (
+                      <div key={idx} className="flex flex-col bg-slate-900/40 p-3 rounded-lg border border-white/5 hover:bg-slate-800/60 transition-colors">
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="font-bold text-white text-[15px] leading-tight w-2/3">{st.name}</span>
+                          <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider border ${statusColor}`}>
+                             {st.level || 'Chờ cập nhật'}
+                          </span>
+                        </div>
+                        <div className="text-xs text-white/50 mb-2 italic truncate">{st.location || '...'}</div>
+                        
+                        <div className="flex justify-between items-end border-t border-white/5 pt-2">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] uppercase opacity-60">Hôm nay</span>
+                            <span className={`text-xl font-mono font-bold ${st.today > 10 ? 'text-yellow-300' : 'text-cyan-300'}`}>
+                              {st.today.toFixed(1)} <span className="text-xs font-normal opacity-70 text-white">mm</span>
+                            </span>
+                          </div>
+                          {(st.has_enough_data || st.total_3day > st.today) && (
+                            <div className="flex flex-col items-end pl-3">
+                              <span className="text-[10px] uppercase opacity-60">Tổng 3 ngày</span>
+                              <span className="text-lg font-mono font-semibold text-white/90">
+                                {st.total_3day.toFixed(1)} <span className="text-xs font-normal opacity-50">mm</span>
+                              </span>
                             </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
               </div>
+              <div className="mt-2 text-right text-[10px] opacity-30">Dữ liệu tự động từ Vrain</div>
             </div>
           </div>
         </div>
 
-
-        {/* 3. PHÂN TÍCH & DỰ BÁO NGẬP LỤT */}
-        <section className={`rounded-xl shadow-sm border-l-4 overflow-hidden mb-6 transition-all
-          ${activeForecasts.length > 0 ? 'bg-white border-red-500 shadow-red-100' : 'bg-white border-green-500 shadow-green-50'}`}>
-          
-          <div className={`p-4 border-b flex items-center justify-between
-            ${activeForecasts.length > 0 ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
-            <h2 className={`font-bold text-lg flex items-center gap-2
-              ${activeForecasts.length > 0 ? 'text-red-800' : 'text-green-800'}`}>
-              {activeForecasts.length > 0 ? <ShieldAlert className="animate-bounce" /> : <ShieldAlert />}
-              DỰ BÁO TÁC ĐỘNG & ĐIỂM NGẬP
+        {/* 3. PHÂN TÍCH & DỰ BÁO THÔNG MINH (NEW LOGIC) */}
+        <section className="mb-6">
+            <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
+                <ShieldAlert className={riskLevel > 0 ? "text-yellow-500" : "text-green-600"} />
+                ĐÁNH GIÁ RỦI RO & DỰ BÁO
             </h2>
-            <span className={`text-xs font-bold px-2 py-1 rounded uppercase
-              ${activeForecasts.length > 0 ? 'bg-red-200 text-red-800' : 'bg-green-200 text-green-800'}`}>
-              {activeForecasts.length > 0 ? 'CÓ NGUY CƠ CAO' : 'AN TOÀN'}
-            </span>
-          </div>
-
-
-          <div className="p-5">
-            {activeForecasts.length > 0 ? (
-              <div className="space-y-4">
-                <div className="text-sm text-slate-600 bg-red-50 p-3 rounded border border-red-100">
-                  ⚠️ <strong>CẢNH BÁO:</strong> Dựa trên mực nước Sông Cái hiện tại ({riverLevel.toFixed(2)}m) 
-                  và lượng mưa tích lũy ({rain3daySum.toFixed(1)}mm), hệ thống dự báo các khu vực sau có nguy cơ ngập lụt:
-                </div>
-                {activeForecasts.map((forecast, idx) => (
-                  <div key={idx} className="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                    <h3 className="font-bold text-slate-800 mb-2 flex items-center gap-2 text-sm uppercase">
-                      <div className={`w-2.5 h-2.5 rounded-full ${forecast.level === 'critical' ? 'bg-red-600 animate-ping' : 'bg-orange-500'}`}></div>
-                      {forecast.title}
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {forecast.areas.map((area, i) => (
-                        <span key={i} className="bg-white text-slate-700 px-3 py-1.5 rounded border border-slate-200 text-sm font-medium shadow-sm flex items-center gap-1">
-                          <MapPin size={12} className="text-red-500" /> {area}
-                        </span>
-                      ))}
+              
+            <div className={`rounded-xl border p-5 transition-all shadow-sm ${
+                riskLevel === 3 ? 'bg-red-50 border-red-500/50' :
+                riskLevel === 2 ? 'bg-orange-50 border-orange-500/50' :
+                riskLevel === 1 ? 'bg-yellow-50 border-yellow-500/50' :
+                'bg-green-50 border-green-500/30'
+            }`}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`p-3 rounded-full ${
+                    riskLevel === 3 ? 'bg-red-500 text-white animate-pulse' :
+                    riskLevel === 2 ? 'bg-orange-500 text-white' :
+                    riskLevel === 1 ? 'bg-yellow-500 text-white' :
+                    'bg-green-500 text-white'
+                  }`}>
+                    {riskLevel === 0 ? <CheckCircle size={24}/> : <AlertTriangle size={24}/>}
+                  </div>
+                  <div>
+                    <div className={`text-xl font-black uppercase tracking-wide ${
+                       riskLevel === 3 ? 'text-red-600' :
+                       riskLevel === 2 ? 'text-orange-600' :
+                       riskLevel === 1 ? 'text-yellow-600' :
+                       'text-green-600'
+                    }`}>
+                      {riskLevel === 3 ? 'NGUY HIỂM - CẢNH BÁO LŨ' :
+                       riskLevel === 2 ? 'CÓ NGUY CƠ CAO' :
+                       riskLevel === 1 ? 'CẦN CHÚ Ý' :
+                       'AN TOÀN'}
+                    </div>
+                    <div className="text-sm opacity-80 text-slate-600">
+                      {riskLevel === 0 
+                        ? "Hiện tại các chỉ số thủy văn đều ở mức bình thường." 
+                        : "Hệ thống phát hiện các yếu tố rủi ro sau:"}
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center text-center py-4 space-y-3">
-                <div className="bg-green-100 p-3 rounded-full">
-                  <ShieldAlert size={32} className="text-green-600" />
                 </div>
-                <div>
-                  <h3 className="font-bold text-green-800 text-lg">Chưa phát hiện nguy cơ ngập lụt</h3>
-                  <p className="text-slate-500 text-sm mt-1 max-w-lg mx-auto leading-relaxed">
-                    Dựa vào lượng mưa ({rain3daySum.toFixed(1)}mm) và mực nước sông hiện tại ({riverLevel.toFixed(2)}m), 
-                    các chỉ số đều nằm trong <strong>ngưỡng an toàn</strong>.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
 
+                {risks.length > 0 ? (
+                  <div className="space-y-3">
+                    {risks.map((risk, index) => (
+                      <div key={index} className="bg-white rounded-lg p-3 border-l-4 shadow-sm" style={{ borderColor: risk.level === 'high' ? '#dc2626' : '#facc15' }}>
+                        <div className="flex justify-between items-center mb-1">
+                          <strong className="text-slate-800">{risk.title}</strong>
+                          {risk.locations && (
+                              <span className="text-[11px] bg-slate-100 px-2 py-0.5 rounded text-slate-600 font-medium border border-slate-200">
+                                  <MapPin size={10} className="inline mr-1 text-red-500"/>{risk.locations}
+                              </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-slate-600">{risk.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-green-100/50 rounded-lg p-4 border border-green-200">
+                     <p className="text-sm text-green-800">
+                       Dựa vào lượng mưa tích lũy 3 ngày ({rain3daySum.toFixed(1)}mm) và mực nước sông hiện tại ({monitorData?.river?.current}m), chưa phát hiện nguy cơ ngập lụt diện rộng.
+                     </p>
+                  </div>
+                )}
+            </div>
+        </section>
 
         <div className="grid md:grid-cols-3 gap-6">
           
@@ -509,11 +575,8 @@ export default function FloodMonitor() {
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h2 className="font-bold text-slate-800 flex items-center gap-2">
                 <Droplets className="w-5 h-5 text-blue-600" />
-                Trạm Đo Mưa Trọng Yếu
+                Trạm Đo Mưa Toàn Tỉnh
               </h2>
-              <p className="text-sm text-gray-500 -mt-2 mb-2">
-                  (Cập nhật: {monitorData?.rain?.updated || '...'})
-              </p>
               <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Vrain Data</span>
             </div>
             
@@ -527,7 +590,7 @@ export default function FloodMonitor() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {rainStations.slice(0, isExpanded ? rainStations.length : 5).map((st, idx) => (
+                  {rainStationList.slice(0, isExpanded ? rainStationList.length : 5).map((st, idx) => (
                     <tr key={idx} className="hover:bg-blue-50 transition-colors group">
                       <td className="px-4 py-3">
                         <div className="font-bold text-slate-700 group-hover:text-blue-700">{st.station_name}</div>
@@ -543,47 +606,40 @@ export default function FloodMonitor() {
                         <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase
                           ${st.mm > 50 ? 'bg-blue-100 text-blue-700' : 
                             st.mm > 0 ? 'bg-cyan-50 text-cyan-700' : 'bg-slate-100 text-slate-400'}`}>
-                          {st.mm > 50 ? 'Mưa lớn' : st.mm > 0 ? 'Mưa nhỏ' : 'Tạnh ráo'}
+                          {st.level || (st.mm > 0 ? 'Mưa nhỏ' : 'Tạnh ráo')}
                         </span>
                       </td>
                     </tr>
                   ))}
-                  {rainStations.length === 0 && (
+                  {rainStationList.length === 0 && (
                      <tr><td colSpan="3" className="p-8 text-center text-slate-400">Đang đồng bộ dữ liệu...</td></tr>
                   )}
                 </tbody>
               </table>
-              {rainStations.length > 5 && (
+              {rainStationList.length > 5 && (
                 <button 
                   onClick={() => setIsExpanded(!isExpanded)}
                   className="w-full py-3 text-xs font-bold text-blue-600 bg-slate-50 hover:bg-blue-50 transition-colors border-t border-slate-100 uppercase tracking-wide"
                 >
-                  {isExpanded ? "Thu gọn" : `Xem thêm ${rainStations.length - 5} trạm khác`}
+                  {isExpanded ? "Thu gọn" : `Xem thêm ${rainStationList.length - 5} trạm khác`}
                 </button>
               )}
             </div>
           </section>
 
-
           {/* 5. TIN TỨC & XẢ LŨ */}
           <div className="space-y-6">
             
-            {/* Control Panel Xả Lũ (GIỮ NGUYÊN FORM, DÙNG DATA VNDMS) */}
-                        {/* Control Panel Xả Lũ */}
-                                    {/* Control Panel Xả Lũ & Hồ Chứa */}
+            {/* Control Panel Xả Lũ */}
             <section className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
               <div className="mb-3">
                 <h2 className="font-bold text-slate-800 flex items-center gap-2 text-sm uppercase tracking-wide">
-                  <Activity className="w-4 h-4 text-red-500" />
-                  Giám Sát Hồ Chứa
+                  <Activity className="w-4 h-4 text-red-500" /> Giám Sát Hồ Chứa
                 </h2>
-                <p className="text-[10px] text-slate-500 mt-1 ml-6">
-                  * Số liệu Mực nước/Dung tích cập nhật trực tiếp từ VNDMS.
-                </p>
+                <p className="text-[10px] text-slate-500 mt-1 ml-6">* Số liệu Mực nước/Dung tích từ VNDMS.</p>
               </div>
 
-                            {/* DANH SÁCH HỒ CHỨA (Dynamic Max) */}
-                            <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 {[
                   { id: 'ho_suoi_dau', label: 'Hồ Suối Dầu' },
                   { id: 'ho_am_chua', label: 'Hồ Am Chúa' },
@@ -592,67 +648,38 @@ export default function FloodMonitor() {
                   { id: 'ho_hoa_son', label: 'Hồ Hoa Sơn' },
                 ].map((lake) => {
                   const data = monitorData?.[lake.id];
-                  
                   const hasFreshData = data?.q_out !== null && data?.q_out !== undefined;
                   const isDischarging = hasFreshData && data.q_out > 0;
-                  
-                  // LẤY MAX TỪ DB (API) - KHÔNG FIX CỨNG NỮA
                   const maxCap = data?.max_capacity || 0;
                   const currentVol = data?.volume_now || 0;
-                  
-                  // Tính phần trăm
                   const percentFull = maxCap > 0 ? Math.min(Math.round((currentVol / maxCap) * 100), 100) : 0;
                   
                   const Wrapper = data?.source_link ? 'a' : 'div';
-                  const wrapperProps = data?.source_link ? { 
-                    href: data.source_link, target: "_blank", rel: "noreferrer",
-                    className: "block hover:opacity-90 transition-opacity"
-                  } : {};
+                  const wrapperProps = data?.source_link ? { href: data.source_link, target: "_blank", rel: "noreferrer", className: "block hover:opacity-90 transition-opacity" } : {};
 
                   return (
                     <Wrapper key={lake.id} {...wrapperProps}>
-                      <div className={`flex justify-between items-start p-3 rounded-lg border transition-all relative overflow-hidden group
-                        ${isDischarging ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-slate-50 border-slate-100 opacity-90'}`}>
-                        
+                      <div className={`flex justify-between items-start p-3 rounded-lg border transition-all relative overflow-hidden group ${isDischarging ? 'bg-red-50 border-red-200 shadow-sm' : 'bg-slate-50 border-slate-100 opacity-90'}`}>
                         {isDischarging && <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500 animate-pulse"></div>}
 
                         <div className="pl-2 flex-1 pr-2">
-                          <div className="font-bold text-sm text-slate-800 flex items-center gap-1 mb-1">
-                            {lake.label}
-                            {data?.source_link && <ExternalLink size={10} className="text-blue-500" />}
-                          </div>
-
+                          <div className="font-bold text-sm text-slate-800 flex items-center gap-1 mb-1">{lake.label} {data?.source_link && <ExternalLink size={10} className="text-blue-500" />}</div>
                           <div className="flex justify-between items-center text-[11px] mb-1">
-                            <span className="text-slate-500">Mực nước (H):</span>
-                            <span className="font-bold text-blue-700">
-                               {data?.level_now ? `${data.level_now.toFixed(2)} m` : '--'}
-                            </span>
+                            <span className="text-slate-500">Mực nước:</span>
+                            <span className="font-bold text-blue-700">{data?.level_now ? `${data.level_now.toFixed(2)} m` : '--'}</span>
                           </div>
-
                           <div className="mb-2">
                             <div className="flex justify-between items-center text-[11px] mb-1">
-                               <span className="text-slate-500">Dung tích (V):</span>
-                               <span className="font-bold text-cyan-700">
-                                 {/* Hiển thị: Hiện tại / Thiết kế (Max) */}
-                                 {currentVol.toFixed(2)} / {maxCap > 0 ? maxCap.toFixed(2) : '?'} <span className="text-[9px] font-normal text-slate-400">tr.m³</span>
-                               </span>
+                               <span className="text-slate-500">Dung tích:</span>
+                               <span className="font-bold text-cyan-700">{currentVol.toFixed(2)} / {maxCap > 0 ? maxCap.toFixed(2) : '?'} <span className="text-[9px] font-normal text-slate-400">tr.m³</span></span>
                             </div>
-                            
                             <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden relative">
                                <div className="absolute left-[70%] top-0 bottom-0 w-[1px] bg-white/50 z-10" title="Mức 70%"></div>
-                               <div 
-                                 className={`h-full rounded-full transition-all duration-700 ${percentFull >= 90 ? 'bg-red-600' : percentFull >= 70 ? 'bg-orange-400' : 'bg-cyan-500'}`} 
-                                 style={{ width: `${percentFull}%` }}
-                               ></div>
+                               <div className={`h-full rounded-full transition-all duration-700 ${percentFull >= 90 ? 'bg-red-600' : percentFull >= 70 ? 'bg-orange-400' : 'bg-cyan-500'}`} style={{ width: `${percentFull}%` }}></div>
                             </div>
-                            
                             <div className="flex justify-between text-[9px] mt-1">
-                               <span className="text-slate-400 italic">
-                                  {data?.news_time ? `${data.news_time}` : "Chờ cập nhật..."}
-                               </span>
-                               <span className={`font-bold ${percentFull >= 85 ? 'text-red-600' : 'text-slate-500'}`}>
-                                  Đạt {percentFull}% thiết kế
-                               </span>
+                               <span className="text-slate-400 italic">{data?.news_time || "Chờ cập nhật..."}</span>
+                               <span className={`font-bold ${percentFull >= 85 ? 'text-red-600' : 'text-slate-500'}`}>Đạt {percentFull}%</span>
                             </div>
                           </div>
                         </div>
@@ -660,20 +687,12 @@ export default function FloodMonitor() {
                         <div className="text-right pl-2 min-w-[70px] border-l border-slate-200/50 flex flex-col justify-center h-full">
                           {hasFreshData ? (
                             <>
-                              <div className={`font-mono font-bold text-lg leading-none ${isDischarging ? 'text-red-600' : 'text-slate-400'}`}>
-                                {data.q_out}
-                              </div>
+                              <div className={`font-mono font-bold text-lg leading-none ${isDischarging ? 'text-red-600' : 'text-slate-400'}`}>{data.q_out}</div>
                               <div className="text-[9px] text-slate-500 font-bold mt-1">m³/s</div>
-                              {isDischarging ? 
-                                <span className="text-[8px] text-white bg-red-500 px-1.5 py-0.5 rounded mt-1 inline-block text-center mx-auto animate-pulse">ĐANG XẢ</span> :
-                                <span className="text-[8px] text-slate-400 mt-1">Chưa có thông tin xả lũ</span>
-                              }
+                              {isDischarging ? <span className="text-[8px] text-white bg-red-500 px-1.5 py-0.5 rounded mt-1 inline-block text-center mx-auto animate-pulse">ĐANG XẢ</span> : <span className="text-[8px] text-slate-400 mt-1">Không xả</span>}
                             </>
                           ) : (
-                            <div className="flex flex-col items-end opacity-50">
-                               <span className="text-lg font-bold text-slate-300">--</span>
-                               <span className="text-[9px] text-slate-400">Chưa có thông tin xả lũ</span>
-                            </div>
+                            <div className="flex flex-col items-end opacity-50"><span className="text-lg font-bold text-slate-300">--</span></div>
                           )}
                         </div>
                       </div>
@@ -681,31 +700,20 @@ export default function FloodMonitor() {
                   );
                 })}
               </div>
-
             </section>
-
-
-
 
             {/* News Feed */}
             <section className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="p-3 bg-slate-50 border-b border-slate-100 font-bold text-xs text-slate-700 uppercase tracking-wide flex items-center gap-2">
-                <FileText size={14} className="text-blue-600"/>
-                Tin tức mới từ báo Khánh Hòa
+                <FileText size={14} className="text-blue-600"/> Tin tức mới
               </div>
               <div className="divide-y divide-slate-100 max-h-[300px] overflow-y-auto">
                 {alerts.slice(0, 8).map((news, i) => (
                   <a key={i} href={news.link} target="_blank" rel="noreferrer" className="block p-3 transition-colors hover:bg-blue-50 group">
                     <div className="flex gap-3">
-                      {/* Icon dấu chấm đơn giản cho mọi tin */}
-                      <div className="mt-1 shrink-0">
-                         <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 group-hover:bg-blue-600 transition-colors"></div>
-                      </div>
+                      <div className="mt-1 shrink-0"><div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 group-hover:bg-blue-600 transition-colors"></div></div>
                       <div>
-                        {/* Title đồng màu */}
-                        <div className="text-xs font-medium leading-snug text-slate-700 group-hover:text-blue-700 transition-colors">
-                          {news.title}
-                        </div>
+                        <div className="text-xs font-medium leading-snug text-slate-700 group-hover:text-blue-700 transition-colors">{news.title}</div>
                         <div className="text-[10px] text-slate-400 mt-1">{news.time_crawled}</div>
                       </div>
                     </div>
@@ -714,17 +722,14 @@ export default function FloodMonitor() {
               </div>
             </section>
 
-
           </div>
         </div>
-
 
         {/* FOOTER */}
         <footer className="text-center text-slate-400 text-[10px] py-6">
           <p>DATA SOURCE: VRAIN.VN (REALTIME) • VNDMS • BÁO KHÁNH HÒA</p>
           <p className="mt-1">Dự án hỗ trợ cộng đồng ứng phó thiên tai.</p>
         </footer>
-
 
       </main>
     </div>

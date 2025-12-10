@@ -74,6 +74,8 @@ export async function GET() {
         };
       }
 
+      
+
       // 2.4. Các Hồ Chứa
             // 2.4. Các Hồ Chứa (Tự động map mọi hồ có trong DB)
                   // 2.4. Các Hồ Chứa
@@ -100,6 +102,13 @@ export async function GET() {
         };
       }
 
+      if (row.name === 'Du_Lieu_Thuong_Nguon') {
+        metrics.Du_Lieu_Thuong_Nguon = {
+            updated: row.updated_at,
+            history_json: row.history_json // Quan trọng cái này
+        };
+      }
+
         
     });
 
@@ -113,7 +122,7 @@ export async function GET() {
         `
       SELECT station_name, basin, location, mm, level
       FROM rain_stations
-      WHERE date = ? AND is_key = 1
+      WHERE date = ?
       ORDER BY mm DESC
     `,
       )
