@@ -7,7 +7,8 @@ export const fetchCache = 'force-no-store';
 export async function GET() {
   try {
     // Đường dẫn tới DB
-    const dbPath = path.join(process.cwd(), '../crawl/flood.db');
+    const dbPath = process.env.DATABASE_URL || path.join(process.cwd(), '../crawl/flood.db');
+    console.log('Connecting to DB at:', dbPath);
     const db = new Database(dbPath, { readonly: true });
 
     // 1. Lấy 20 tin cảnh báo mới nhất
