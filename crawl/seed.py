@@ -55,10 +55,10 @@ c.executemany('INSERT INTO alerts (title, link, source, time_crawled, is_urgent)
 
 # Khởi tạo các hàng metrics cần thiết
 metrics_init = [
-    ('Sông Cái (Đồng Trăng)', 0, '', '', 'river'),
-    ('Mưa Thượng Nguồn (Max)', 0, '', '', 'rain'),
-    ('Du_Lieu_Thuong_Nguon', 0, '', '', 'upstream_list'),
-    ('Mưa Toàn Tỉnh', 0, '', '', 'rain')
+    ('Sông Cái (Đồng Trăng)', 0.0, '', '', 'river'),
+    ('Mưa Thượng Nguồn (Max)', 0.0, '', '', 'rain'),
+    ('Du_Lieu_Thuong_Nguon', 0.0, '', '', 'upstream_list'),
+    ('Mưa Toàn Tỉnh', 0.0, '', '', 'rain')
 ]
 for m in metrics_init:
     c.execute("INSERT INTO metrics (name, value, updated_at, description, type) VALUES (?,?,?,?,?)", m)
