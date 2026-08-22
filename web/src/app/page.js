@@ -79,11 +79,14 @@ const levelColor = (lv) =>
   : { bg: 'bg-blue-600', grad: 'from-blue-600 via-blue-500 to-blue-700', text: 'text-blue-600', border: '#22c55e' };
 
 // === BẢN ĐỒ 2.5D (MapLibre, pitch ~52°) — điểm quan trắc + vùng cảnh báo ngập ===
-function RiskMap({ center, province, provinceName, river, riverDanger, reservoirs, riskLevel, rainMm }) {
+function RiskMap({ center, province, provinceName, river, riverDanger, reservoirs, riskLevel, rainMm, ready }) {
   const containerRef = useRef(null);
   const [mapError, setMapError] = useState(null);
 
   useEffect(() => {
+    // CHỈ dựng map khi dữ liệu đã khớp đúng tỉnh đang chọn — tránh race khi đổi tỉnh
+    // (effect chạy lại ngay với props của tỉnh cũ, marker bị vẽ sai vị trí/off-canvas)
+    if (!ready) return;
     let map = null;
     let destroyed = false;
     let blinkTimer = null;
@@ -220,11 +223,17 @@ function RiskMap({ center, province, provinceName, river, riverDanger, reservoir
       cleanups.forEach(fn => fn());
       if (map) map.remove();
     };
-  }, [province]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [province, ready, river?.current ?? 0, riskLevel]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="relative">
-      <div ref={containerRef} className="w-full rounded-xl overflow-hidden" style={{ height: 430 }} />
+      <div ref={containerRef} className="w-full rounded-xl overflow-hidden bg-slate-100" style={{ height: 430 }} />
+      {!ready && !mapError && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-100 text-slate-500 rounded-xl">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
+          <span className="text-xs font-semibold">Đang tải dữ liệu quan trắc tỉnh...</span>
+        </div>
+      )}
       {mapError && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/90 text-white rounded-xl p-4 text-center">
           <span className="text-sm font-bold">Trình duyệt không mở được bản đồ 3D</span>
@@ -780,6 +789,7 @@ export default function FloodMonitor() {
               reservoirs={reservoirs}
               riskLevel={riskLevel}
               rainMm={mRain ? mRain.max_mm : 0}
+              ready={monitorData?.province?.code === province}
             />
           </div>
         </section>
