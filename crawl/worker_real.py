@@ -1017,6 +1017,58 @@ def crawl_news():
     except Exception:
         pass
 
+RIVER_GEO_DIR = os.path.join(BASE_DIR, "rivers")
+RIVER_GEO_MAX_AGE_DAYS = 7
+
+def fetch_river_geojson(force=False):
+    """Lấy polyline sông chính (OSM waterway=river) theo tỉnh qua Overpass API.
+    Cache 7 ngày/file crawl/rivers/<code>.json — dùng cho bản đồ dòng chảy 3D."""
+    try:
+        os.makedirs(RIVER_GEO_DIR, exist_ok=True)
+    except Exception:
+        return
+    now = time.time()
+    for code, cfg in PROVINCES.items():
+        out_path = os.path.join(RIVER_GEO_DIR, f"{code}.json")
+        if not force and os.path.exists(out_path) and \
+           now - os.path.getmtime(out_path) < RIVER_GEO_MAX_AGE_DAYS * 86400:
+            continue
+        fp = cfg.get("forecast_points", [{}])[0]
+        lat0, lon0 = fp.get("lat", 16.5), fp.get("lon", 106.0)
+        d_lat, d_lon = 1.2, 1.5
+        bbox = f"{lat0-d_lat:.4f},{lon0-d_lon:.4f},{lat0+d_lat:.4f},{lon0+d_lon:.4f}"
+        query = f'[out:json][timeout:40];way["waterway"="river"]({bbox});out geom;'
+        try:
+            r = requests.post(
+                "https://overpass-api.de/api/interpreter",
+                data={"data": query}, timeout=60,
+                headers={"User-Agent": "khanhhoa-flood-monitor/1.0"},
+            )
+            if r.status_code != 200:
+                print(f"⚠️ rivers {code}: HTTP {r.status_code}")
+                continue
+            elements = r.json().get("elements", [])
+            features = []
+            for el in elements:
+                geom = el.get("geometry") or []
+                if len(geom) < 2:
+                    continue
+                coords = [[pt["lon"], pt["lat"]] for pt in geom]
+                features.append({
+                    "type": "Feature",
+                    "properties": {"osm_id": el.get("id"), "name": (el.get("tags") or {}).get("name", "")},
+                    "geometry": {"type": "LineString", "coordinates": coords},
+                })
+            if not features:
+                continue
+            fc = {"type": "FeatureCollection", "features": features}
+            with open(out_path, "w", encoding="utf-8") as f:
+                json.dump(fc, f, ensure_ascii=False)
+            print(f"  🌊 rivers {cfg['name']}: {len(features)} đoạn sông")
+            time.sleep(8)  # tôn trọng rate limit Overpass
+        except Exception as e:
+            print(f"⚠️ rivers {code}: {e}")
+
 def save_province_registry():
     """Ghi danh sách tỉnh + cấu hình meta (gồm ngưỡng BĐ trạm sông) xuống metrics cho API/web."""
     registry = []
@@ -1046,6 +1098,7 @@ def save_province_registry():
 if __name__ == "__main__":
     ensure_tables_and_columns()
     print("🚀 KHANH HOA FLOOD MONITOR - MULTI-PROVINCE (%d tỉnh)" % len(PROVINCES))
+    fetch_river_geojson()  # cache 7 ngày — polyline sông cho bản đồ dòng chảy 3D
     while True:
         print(f"\n⏰ {datetime.now(TZ_VN).strftime('%H:%M %d/%m')}")
         save_province_registry()

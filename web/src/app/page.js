@@ -78,137 +78,222 @@ const levelColor = (lv) =>
   : lv === 1 ? { bg: 'bg-amber-500', grad: 'from-amber-500 via-amber-400 to-amber-600', text: 'text-amber-600', border: '#f59e0b' }
   : { bg: 'bg-blue-600', grad: 'from-blue-600 via-blue-500 to-blue-700', text: 'text-blue-600', border: '#22c55e' };
 
-// === BẢN ĐỒ 2.5D (MapLibre, pitch ~52°) — điểm quan trắc + vùng cảnh báo ngập ===
+// Hộp polygon vuông nhỏ quanh 1 điểm (cho khối nước 3D fill-extrusion)
+function boxPolygon([lng, lat], d = 0.06) {
+  return {
+    type: 'Feature',
+    properties: {},
+    geometry: {
+      type: 'Polygon',
+      coordinates: [[
+        [lng - d, lat - d], [lng + d, lat - d], [lng + d, lat + d], [lng - d, lat + d], [lng - d, lat - d],
+      ]],
+    },
+  };
+}
+
+// === BẢN ĐỒ 3D — địa hình thật + dòng chảy sông động + vùng ngập lan tỏa ===
 function RiskMap({ center, province, provinceName, river, riverDanger, reservoirs, riskLevel, rainMm, ready }) {
   const containerRef = useRef(null);
   const [mapError, setMapError] = useState(null);
 
   useEffect(() => {
-    // CHỈ dựng map khi dữ liệu đã khớp đúng tỉnh đang chọn — tránh race khi đổi tỉnh
-    // (effect chạy lại ngay với props của tỉnh cũ, marker bị vẽ sai vị trí/off-canvas)
+    // CHỈ dựng map khi dữ liệu đã khớp đúng tỉnh đang chọn (tránh race đổi tỉnh)
     if (!ready) return;
     let map = null;
     let destroyed = false;
+    let rafRings = null;
+    let flowTimer = null;
     let blinkTimer = null;
     const cleanups = [];
 
-    import('maplibre-gl')
-      .then((mod) => {
-        // interop: bản build này export named (mod.Map) chứ không phải mod.default
+    Promise.all([
+      import('maplibre-gl'),
+      fetch(`/api/rivergeo?province=${province}`).then(r => r.json()).catch(() => ({ features: [] })),
+    ])
+      .then(([mod, riverGeo]) => {
         const maplibregl = mod.default ?? mod;
         if (destroyed || !containerRef.current) return;
         try {
-      map = new maplibregl.Map({
-        container: containerRef.current,
-        // Nền 2D dạng lớp (không vệ tinh): Carto Voyager — có chi tiết tới
-        // đường/phường/xã khi zoom, màu sáng dễ nhìn cảnh báo
-        style: {
-          version: 8,
-          sources: {
-            carto: {
-              type: 'raster',
-              tiles: ['https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-                      'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
-                      'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png'],
-              tileSize: 256,
-              attribution: '© OpenStreetMap, © CARTO',
+          map = new maplibregl.Map({
+            container: containerRef.current,
+            // Nền tối + địa hình 3D thật (DEM terrarium) — dòng chảy & vùng ngập nổi bật
+            style: {
+              version: 8,
+              sources: {
+                dark: {
+                  type: 'raster',
+                  tiles: [
+                    'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+                    'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+                    'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+                  ],
+                  tileSize: 256,
+                  attribution: '© OpenStreetMap, © CARTO, DEM: AWS/Mapzen',
+                },
+                dem: {
+                  type: 'raster-dem',
+                  tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+                  tileSize: 256,
+                  encoding: 'terrarium',
+                  maxzoom: 12,
+                },
+              },
+              layers: [{ id: 'dark', type: 'raster', source: 'dark' }],
             },
-          },
-          layers: [
-            { id: 'carto', type: 'raster', source: 'carto' },
-          ],
-        },
-        center: [center.lon, center.lat],
-        zoom: 8.4,
-        pitch: 0,
-        bearing: 0,
-      });
-      map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
-
-      const markerEl = (color, label, blink, big) => {
-        const el = document.createElement('div');
-        el.style.cssText = 'display:flex;align-items:center;gap:5px;cursor:pointer;';
-        const dot = document.createElement('div');
-        dot.style.cssText = `width:${big ? 15 : 11}px;height:${big ? 15 : 11}px;border-radius:9999px;background:${color};border:2px solid rgba(255,255,255,.95);box-shadow:0 0 8px ${color};`;
-        if (blink) {
-          dot.classList.add('map-blink');
-          dot.style.background = '#dc2626';
-          dot.style.boxShadow = '0 0 12px #dc2626';
-        }
-        el.appendChild(dot);
-        if (label) {
-          const tag = document.createElement('span');
-          tag.style.cssText = 'background:rgba(220,38,38,.85);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px;white-space:nowrap;';
-          if (!blink) tag.style.background = 'rgba(2,6,23,.78)';
-          tag.textContent = label;
-          el.appendChild(tag);
-        }
-        return el;
-      };
-
-      const addMarker = (lng, lat, color, label, html, pulse, big) => {
-        if (lng == null || lat == null) return;
-        const m = new maplibregl.Marker({ element: markerEl(color, label, pulse, big) })
-          .setLngLat([lng, lat])
-          .setPopup(new maplibregl.Popup({ offset: 14, maxWidth: '240px' }).setHTML(html))
-          .addTo(map);
-        cleanups.push(() => m.remove());
-      };
-
-      map.on('load', () => {
-        let blinkPhase = false;
-        // Vùng cảnh báo ngập — chấm/vòng ĐỎ NHẤP NHÁY theo nhịp (không phải ranh ngập thật)
-        if (riskLevel >= 2 && river?.lat != null) {
-          map.addSource('floodzone', {
-            type: 'geojson',
-            data: { type: 'Feature', geometry: { type: 'Point', coordinates: [river.lon, river.lat] }, properties: {} },
+            center: [center.lon, center.lat],
+            zoom: 8.2,
+            pitch: 55,
+            bearing: -12,
+            maxPitch: 72,
           });
-          map.addLayer({
-            id: 'floodring', type: 'circle', source: 'floodzone',
-            paint: {
-              'circle-radius': riskLevel >= 3 ? 26 : 15,
-              'circle-color': '#ef4444', 'circle-opacity': 0.2,
-              'circle-stroke-color': '#dc2626', 'circle-stroke-width': 1.6, 'circle-stroke-opacity': 0.85,
-            },
-          });
-          blinkTimer = setInterval(() => {
-            blinkPhase = !blinkPhase;
-            if (map && map.getLayer('floodring')) {
-              map.setPaintProperty('floodring', 'circle-opacity', blinkPhase ? 0.32 : 0.07);
-              map.setPaintProperty('floodring', 'circle-stroke-opacity', blinkPhase ? 0.95 : 0.3);
+          map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
+
+          const markerEl = (color, label, blink, big) => {
+            const el = document.createElement('div');
+            el.style.cssText = 'display:flex;align-items:center;gap:5px;cursor:pointer;';
+            const dot = document.createElement('div');
+            dot.style.cssText = `width:${big ? 15 : 11}px;height:${big ? 15 : 11}px;border-radius:9999px;background:${color};border:2px solid rgba(255,255,255,.95);box-shadow:0 0 8px ${color};`;
+            if (blink) {
+              dot.classList.add('map-blink');
+              dot.style.background = '#dc2626';
+              dot.style.boxShadow = '0 0 14px #dc2626';
             }
-          }, 600);
-        }
+            el.appendChild(dot);
+            if (label) {
+              const tag = document.createElement('span');
+              tag.style.cssText = 'background:rgba(220,38,38,.85);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px;white-space:nowrap;';
+              if (!blink) tag.style.background = 'rgba(2,6,23,.78)';
+              tag.textContent = label;
+              el.appendChild(tag);
+            }
+            return el;
+          };
 
-        // Trạm sông
-        if (river?.lat != null) {
-          const rising = (river.history48h?.length || 0) >= 2 &&
-            river.history48h[river.history48h.length - 1].value > river.history48h[0].value;
-          const color = riverDanger ? '#dc2626' : rising ? '#f59e0b' : '#0ea5e9';
-          addMarker(river.lon, river.lat, color,
-            `${river.current != null ? river.current.toFixed(2) + 'm' : river.name}`,
-            `<b>${river.name}</b><br/>Mực nước: <b>${river.current != null ? river.current.toFixed(2) + ' m' : '--'}</b><br/>Cập nhật: ${river.updated || '--'}<br/>${riverDanger ? '<span style="color:#dc2626;font-weight:700;">⚠ Vượt ngưỡng báo động</span>' : rising ? '<span style="color:#f59e0b;">Đang dâng</span>' : 'Ổn định'}`,
-            riverDanger, riverDanger);
-        }
+          const addMarker = (lng, lat, color, label, html, blink, big) => {
+            if (lng == null || lat == null) return;
+            const m = new maplibregl.Marker({ element: markerEl(color, label, blink, big) })
+              .setLngLat([lng, lat])
+              .setPopup(new maplibregl.Popup({ offset: 14, maxWidth: '240px' }).setHTML(html))
+              .addTo(map);
+            cleanups.push(() => m.remove());
+          };
 
-        // Hồ chứa
-        for (const h of reservoirs) {
-          const pct = h.max_capacity > 0 ? Math.min(Math.round((h.volume_now / h.max_capacity) * 100), 100) : 0;
-          const discharging = h.q_out != null && h.q_out > 0;
-          const color = discharging ? '#dc2626' : pct >= 85 ? '#f97316' : '#06b6d4';
-          addMarker(h.lon, h.lat, color, `${pct}%`,
-            `<b>${h.name}</b><br/>Mực nước: <b>${h.level_now != null ? h.level_now.toFixed(2) + ' m' : '--'}</b><br/>Dung tích: ${pct}%<br/>Xả: ${h.q_out != null ? h.q_out + ' m³/s' : '--'}${discharging ? '<br/><span style="color:#dc2626;font-weight:700;">⚠ Đang xả lũ</span>' : ''}`,
-            discharging, false);
-        }
+          map.on('load', () => {
+            try { map.setTerrain({ source: 'dem', exaggeration: 1.4 }); } catch (e) { /* DEM lỗi -> map phẳng, vẫn chạy */ }
 
-        // Điểm cảnh báo mưa tại tâm tỉnh
-        if (rainMm >= 25) {
-          const color = riskLevel >= 2 ? '#dc2626' : '#f59e0b';
-          addMarker(center.lon, center.lat, color, `${rainMm.toFixed(0)}mm`,
-            `<b>${provinceName}</b><br/>Mưa tối đa 24h: <b>${rainMm.toFixed(1)} mm</b>${riskLevel >= 2 ? '<br/><span style="color:#dc2626;font-weight:700;">⚠ Nguy cơ ngập lụt / lũ quét</span>' : ''}`,
-            riskLevel >= 2, riskLevel >= 2);
-        }
-        });
+            // --- SÔNG CHÍNH: nền xanh đậm + DÒNG CHẢY cyan chạy động theo hướng ---
+            if (riverGeo && riverGeo.features && riverGeo.features.length > 0) {
+              map.addSource('rivers', { type: 'geojson', data: riverGeo });
+              map.addLayer({
+                id: 'river-base', type: 'line', source: 'rivers',
+                paint: {
+                  'line-color': '#1e40af',
+                  'line-width': ['interpolate', ['linear'], ['zoom'], 7, 1.4, 11, 4.5, 14, 9],
+                  'line-opacity': 0.85,
+                },
+              });
+              map.addLayer({
+                id: 'river-flow', type: 'line', source: 'rivers',
+                paint: {
+                  'line-color': '#22d3ee',
+                  'line-width': ['interpolate', ['linear'], ['zoom'], 7, 0.9, 11, 2.4, 14, 5],
+                  'line-opacity': 0.95,
+                  'line-blur': 0.6,
+                },
+              });
+              // "ants-marching": dịch dasharray theo vòng lặp -> nước chảy
+              const dashFrames = [[0, 4], [0.4, 3.6], [0.8, 3.2], [1.2, 2.8], [1.6, 2.4], [2, 2], [2.4, 1.6], [2.8, 1.2], [3.2, 0.8], [3.6, 0.4]];
+              let df = 0;
+              const animateFlow = () => {
+                if (destroyed || !map || !map.getLayer('river-flow')) return;
+                map.setPaintProperty('river-flow', 'line-dasharray', dashFrames[df % dashFrames.length]);
+                df++;
+                flowTimer = setTimeout(animateFlow, 90);
+              };
+              animateFlow();
+            }
+
+            // --- VÙNG NGẬP LAN TỎA quanh điểm nguy hiểm (trạm sông ưu tiên) ---
+            const floodAnchor = river?.lat != null
+              ? [river.lon, river.lat]
+              : (rainMm >= 25 ? [center.lon, center.lat] : null);
+            if (riskLevel >= 2 && floodAnchor) {
+              map.addSource('floodpt', {
+                type: 'geojson',
+                data: { type: 'Feature', geometry: { type: 'Point', coordinates: floodAnchor }, properties: {} },
+              });
+              // Khối nước đỏ 3D (fill-extrusion) tại điểm nguy hiểm
+              map.addSource('floodpoly', { type: 'geojson', data: boxPolygon(floodAnchor, 0.05) });
+              map.addLayer({
+                id: 'flood-prism', type: 'fill-extrusion', source: 'floodpoly',
+                paint: {
+                  'fill-extrusion-color': '#dc2626',
+                  'fill-extrusion-opacity': 0.3,
+                  'fill-extrusion-height': riskLevel >= 3 ? 700 : 350,
+                  'fill-extrusion-base': 0,
+                },
+              });
+              // 3 vòng lan tỏa theo chu kỳ, lệch pha
+              for (let i = 0; i < 3; i++) {
+                map.addLayer({
+                  id: `flood-ring-${i}`, type: 'circle', source: 'floodpt',
+                  paint: {
+                    'circle-radius': 0, 'circle-color': '#ef4444', 'circle-opacity': 0,
+                    'circle-stroke-color': '#f87171', 'circle-stroke-width': 1.5, 'circle-stroke-opacity': 0.8,
+                  },
+                });
+              }
+              const t0 = performance.now();
+              const maxR = riskLevel >= 3 ? 34 : 20;
+              const animRings = () => {
+                if (destroyed || !map || !map.getLayer('flood-ring-0')) return;
+                const t = (performance.now() - t0) / 1000;
+                for (let i = 0; i < 3; i++) {
+                  const ph = (t / 2.4 + i / 3) % 1;
+                  map.setPaintProperty(`flood-ring-${i}`, 'circle-radius', 4 + ph * maxR);
+                  map.setPaintProperty(`flood-ring-${i}`, 'circle-opacity', 0.28 * (1 - ph));
+                  map.setPaintProperty(`flood-ring-${i}`, 'circle-stroke-opacity', 0.9 * (1 - ph));
+                }
+                rafRings = requestAnimationFrame(animRings);
+              };
+              animRings();
+              // Khối đỏ "thở"
+              let prismPhase = false;
+              blinkTimer = setInterval(() => {
+                if (!map || !map.getLayer('flood-prism')) return;
+                prismPhase = !prismPhase;
+                map.setPaintProperty('flood-prism', 'fill-extrusion-opacity', prismPhase ? 0.48 : 0.16);
+              }, 700);
+            }
+
+            // --- Markers như cũ ---
+            if (river?.lat != null) {
+              const rising = (river.history48h?.length || 0) >= 2 &&
+                river.history48h[river.history48h.length - 1].value > river.history48h[0].value;
+              const color = riverDanger ? '#dc2626' : rising ? '#f59e0b' : '#0ea5e9';
+              addMarker(river.lon, river.lat, color,
+                `${river.current != null ? river.current.toFixed(2) + 'm' : river.name}`,
+                `<b>${river.name}</b><br/>Mực nước: <b>${river.current != null ? river.current.toFixed(2) + ' m' : '--'}</b><br/>Cập nhật: ${river.updated || '--'}<br/>${riverDanger ? '<span style="color:#dc2626;font-weight:700;">⚠ Vượt ngưỡng báo động</span>' : rising ? '<span style="color:#f59e0b;">Đang dâng</span>' : 'Ổn định'}`,
+                riverDanger, riverDanger);
+            }
+
+            for (const h of reservoirs) {
+              const pct = h.max_capacity > 0 ? Math.min(Math.round((h.volume_now / h.max_capacity) * 100), 100) : 0;
+              const discharging = h.q_out != null && h.q_out > 0;
+              const color = discharging ? '#dc2626' : pct >= 85 ? '#f97316' : '#06b6d4';
+              addMarker(h.lon, h.lat, color, `${pct}%`,
+                `<b>${h.name}</b><br/>Mực nước: <b>${h.level_now != null ? h.level_now.toFixed(2) + ' m' : '--'}</b><br/>Dung tích: ${pct}%<br/>Xả: ${h.q_out != null ? h.q_out + ' m³/s' : '--'}${discharging ? '<br/><span style="color:#dc2626;font-weight:700;">⚠ Đang xả lũ</span>' : ''}`,
+                discharging, false);
+            }
+
+            if (rainMm >= 25) {
+              const color = riskLevel >= 2 ? '#dc2626' : '#f59e0b';
+              addMarker(center.lon, center.lat, color, `${rainMm.toFixed(0)}mm`,
+                `<b>${provinceName}</b><br/>Mưa tối đa 24h: <b>${rainMm.toFixed(1)} mm</b>${riskLevel >= 2 ? '<br/><span style="color:#dc2626;font-weight:700;">⚠ Nguy cơ ngập lụt / lũ quét</span>' : ''}`,
+                riskLevel >= 2, riskLevel >= 2);
+            }
+          });
         } catch (e) {
           if (!destroyed) setMapError(String((e && e.message) || e));
         }
@@ -219,6 +304,8 @@ function RiskMap({ center, province, provinceName, river, riverDanger, reservoir
 
     return () => {
       destroyed = true;
+      if (rafRings) cancelAnimationFrame(rafRings);
+      if (flowTimer) clearTimeout(flowTimer);
       if (blinkTimer) clearInterval(blinkTimer);
       cleanups.forEach(fn => fn());
       if (map) map.remove();
@@ -227,15 +314,15 @@ function RiskMap({ center, province, provinceName, river, riverDanger, reservoir
 
   return (
     <div className="relative">
-      <div ref={containerRef} className="w-full rounded-xl overflow-hidden bg-slate-100" style={{ height: 430 }} />
+      <div ref={containerRef} className="w-full rounded-xl overflow-hidden bg-slate-900" style={{ height: 460 }} />
       {!ready && !mapError && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-100 text-slate-500 rounded-xl">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-900 text-slate-400 rounded-xl">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
           <span className="text-xs font-semibold">Đang tải dữ liệu quan trắc tỉnh...</span>
         </div>
       )}
       {mapError && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/90 text-white rounded-xl p-4 text-center">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/95 text-white rounded-xl p-4 text-center">
           <span className="text-sm font-bold">Trình duyệt không mở được bản đồ 3D</span>
           <span className="text-[11px] text-white/60 break-all max-w-md">{mapError}</span>
           <a href={`https://www.windy.com/?rain,${center.lat},${center.lon},8`} target="_blank" rel="noreferrer"
@@ -245,8 +332,10 @@ function RiskMap({ center, province, provinceName, river, riverDanger, reservoir
         </div>
       )}
       {!mapError && (
-        <div className="absolute bottom-2 left-2 z-10 bg-slate-900/80 text-white text-[10px] px-2.5 py-1.5 rounded-lg flex gap-3">
-          <span className="text-red-400 font-bold">🔴 nhấp nháy = nguy cơ ngập/lũ</span><span>🟠 dâng / gần đầy</span><span>🔵 ổn định</span>
+        <div className="absolute bottom-2 left-2 z-10 bg-slate-900/85 text-white text-[10px] px-2.5 py-1.5 rounded-lg flex flex-wrap gap-x-3 gap-y-0.5 max-w-[92%]">
+          <span className="text-cyan-300 font-bold">~ dòng sáng = dòng chảy sông chính</span>
+          <span className="text-red-400 font-bold">◯ đỏ lan = vùng nguy cơ ngập</span>
+          <span>🔴 nháy = điểm nguy hiểm</span>
         </div>
       )}
     </div>
