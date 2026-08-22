@@ -81,17 +81,19 @@ const levelColor = (lv) =>
 // === BẢN ĐỒ 2.5D (MapLibre, pitch ~52°) — điểm quan trắc + vùng cảnh báo ngập ===
 function RiskMap({ center, province, provinceName, river, riverDanger, reservoirs, riskLevel, rainMm }) {
   const containerRef = useRef(null);
+  const [mapError, setMapError] = useState(null);
 
   useEffect(() => {
     let map = null;
     let destroyed = false;
     const cleanups = [];
 
-    import('maplibre-gl').then((mod) => {
-      const maplibregl = mod.default;
-      if (destroyed || !containerRef.current) return;
-
-      map = new maplibregl.Map({
+    import('maplibre-gl')
+      .then((mod) => {
+        const maplibregl = mod.default;
+        if (destroyed || !containerRef.current) return;
+        try {
+          map = new maplibregl.Map({
         container: containerRef.current,
         style: {
           version: 8,
@@ -190,8 +192,14 @@ function RiskMap({ center, province, provinceName, river, riverDanger, reservoir
             `<b>${provinceName}</b><br/>Mưa tối đa 24h: <b>${rainMm.toFixed(1)} mm</b>${riskLevel >= 2 ? '<br/><span style="color:#dc2626;font-weight:700;">⚠ Nguy cơ ngập lụt / lũ quét</span>' : ''}`,
             riskLevel >= 2, riskLevel >= 2);
         }
+        });
+        } catch (e) {
+          if (!destroyed) setMapError(String((e && e.message) || e));
+        }
+      })
+      .catch((e) => {
+        if (!destroyed) setMapError('Không tải được thư viện bản đồ: ' + String((e && e.message) || e));
       });
-    });
 
     return () => {
       destroyed = true;
@@ -203,9 +211,21 @@ function RiskMap({ center, province, provinceName, river, riverDanger, reservoir
   return (
     <div className="relative">
       <div ref={containerRef} className="w-full rounded-xl overflow-hidden" style={{ height: 430 }} />
-      <div className="absolute bottom-2 left-2 z-10 bg-slate-900/80 text-white text-[10px] px-2.5 py-1.5 rounded-lg flex gap-3">
-        <span>🔴 cảnh báo</span><span>🟠 dâng/gần đầy</span><span>🔵 ổn định</span>
-      </div>
+      {mapError && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/90 text-white rounded-xl p-4 text-center">
+          <span className="text-sm font-bold">Trình duyệt không mở được bản đồ 3D</span>
+          <span className="text-[11px] text-white/60 break-all max-w-md">{mapError}</span>
+          <a href={`https://www.windy.com/?rain,${center.lat},${center.lon},8`} target="_blank" rel="noreferrer"
+             className="text-xs font-bold bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg mt-1">
+            Xem radar mưa 2D trên Windy →
+          </a>
+        </div>
+      )}
+      {!mapError && (
+        <div className="absolute bottom-2 left-2 z-10 bg-slate-900/80 text-white text-[10px] px-2.5 py-1.5 rounded-lg flex gap-3">
+          <span>🔴 cảnh báo</span><span>🟠 dâng/gần đầy</span><span>🔵 ổn định</span>
+        </div>
+      )}
     </div>
   );
 }
