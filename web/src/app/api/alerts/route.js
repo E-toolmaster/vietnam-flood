@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import path from 'path';
-import { computeRisk } from '../risk-engine';
+import { computeRisk, rainLabel } from '../risk-engine';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
@@ -154,6 +154,18 @@ export async function GET(request) {
     metrics.rain_stations = db
       .prepare('SELECT station_name, basin, location, mm, level, is_key FROM rain_stations WHERE date = ? AND province = ? ORDER BY mm DESC')
       .all(today, province);
+
+    // 5.1 Ưu tiên max trạm hôm nay cho "Mưa lớn nhất tỉnh" — bảng tổng quan
+    // trang chủ Vrain treo số cửa sổ cũ sau khi ngày thủy văn lấn 19h
+    if (metrics.rain_stations.length > 0 && metrics.province_rain) {
+      const sm = metrics.rain_stations[0];
+      metrics.province_rain.today = {
+        max_mm: sm.mm || 0,
+        station: sm.station_name,
+        level: sm.level || rainLabel(sm.mm || 0),
+        as_of: metrics.province_rain.today?.as_of,
+      };
+    }
 
     // 6. Diễn biến mực nước 48h từ river_history
     let riverHistory48h = [];

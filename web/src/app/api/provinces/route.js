@@ -50,11 +50,25 @@ export async function GET() {
       forecastByProv[r.province] = { max_mm: r.value, point_name: point };
     }
 
+    // Ưu tiên max từ trạm deep-pass hôm nay — tươi hơn bảng tổng quan trang chủ,
+    // đặc biệt sau 19h khi ngày thủy văn Vrain lấn sang ngày mới (bảng trang chủ
+    // còn treo số của cửa sổ cũ). Tỉnh không được deep-pass hôm nay -> fallback.
+    const stationMax = {};
+    try {
+      const rows = db
+        .prepare('SELECT province, station_name, mm, level FROM rain_stations WHERE date = ? ORDER BY mm DESC')
+        .all(today);
+      for (const r of rows) {
+        if (r.province && stationMax[r.province] === undefined) stationMax[r.province] = r;
+      }
+    } catch (e) { /* bảng chưa có */ }
+
     const provinces = registry.map(p => {
       const rain = byProv[p.code];
       const todayRow = rain?.days?.find(d => d.date === today);
       const d3 = (rain?.days || []).reduce((a, b) => a + (b.max_mm || 0), 0);
-      const mm = todayRow?.max_mm || 0;
+      const sm = stationMax[p.code];
+      const mm = sm ? (sm.mm || 0) : (todayRow?.max_mm || 0);
       const f = forecastByProv[p.code];
       return {
         code: p.code,
@@ -62,7 +76,7 @@ export async function GET() {
         kind: p.kind,
         has_river: !!p.river,
         rain_mm: mm,
-        rain_station: todayRow?.station_name || null,
+        rain_station: sm ? sm.station_name : (todayRow?.station_name || null),
         rain_level_label: rainLabel(mm),
         rain_as_of: todayRow?.as_of || null,
         rain_3day: Math.round(d3 * 10) / 10,

@@ -272,7 +272,7 @@ export default function FloodMonitor() {
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400"></span>
                 </span>
                 <span>Live | {currentTime}</span>
-                {mRain && <span className="hidden sm:inline">| Mưa max: {mRain.max_mm.toFixed(1)}mm</span>}
+                {mRain && <span className="hidden sm:inline">| Mưa 24h (trạm max): {mRain.max_mm.toFixed(1)}mm</span>}
               </div>
             </div>
           </div>
@@ -293,7 +293,7 @@ export default function FloodMonitor() {
                 className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all hover:scale-105 ${chipClass(p)}`}>
                 <span className={`inline-block w-2 h-2 rounded-full mr-1.5 ${lv >= 2 ? 'bg-white animate-pulse' : lv === 1 ? 'bg-amber-200' : (p.rain_mm || 0) > 0 ? 'bg-sky-300' : 'bg-white/30'}`}></span>
                 {p.name}
-                {p.rain_mm >= 1 && <span className="ml-1.5 font-mono">{p.rain_mm.toFixed(0)}mm</span>}
+                {p.rain_mm >= 1 && <span className="ml-1.5 font-mono">{p.rain_mm.toFixed(0)}<span className="opacity-60 text-[9px]">mm/24h</span></span>}
               </button>
             );
           })}
