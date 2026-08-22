@@ -31,6 +31,14 @@ function nationalRiskCap(mm24) {
   return 0;
 }
 
+// Cấp độ mưa nhanh cho bảng tổng quan toàn quốc (dùng ở /api/provinces)
+export function provinceRainLevel(mm, d3 = 0) {
+  if (!(mm >= 50)) return 0;
+  let level = mm >= 180 ? 3 : mm >= 100 ? 2 : 1;
+  if (d3 >= 250 && level < 3) level += 1;
+  return level;
+}
+
 /**
  * @param {Object} input
  * @param {Array}  input.rainStations   rows rain_stations hôm nay (mm, level, is_key, station_name)
@@ -39,10 +47,35 @@ function nationalRiskCap(mm24) {
  * @param {Object} input.river          {current, bd1, bd2, bd3, hasData}
  * @param {Object} input.riverTrend     {risePerHour, hoursSpan} từ river_history
  * @param {Array}  input.reservoirs     [{name, q_out, percentFull}]
+ * @param {string} input.provinceKind   'river' | 'mountain'
+ * @param {Object} input.provinceRain   {today:{max_mm,station,level,as_of}, rain3day:[..], daysPresent}
  * @returns {{level: number, factors: Array, computedAt: string}}
  */
-export function computeRisk({ rainStations = [], upstreamList = [], forecast = null, river = null, riverTrend = null, reservoirs = [] }) {
+export function computeRisk({ rainStations = [], upstreamList = [], forecast = null, river = null, riverTrend = null, reservoirs = [], provinceKind = 'river', provinceRain = null }) {
   const factors = [];
+
+  // --- 0. MƯA LỚN VÙNG NỎI: lũ quét / sạt lở (khuyến cáo KTTV + Điều 44 QĐ 18/2021) ---
+  if (provinceKind === 'mountain' && provinceRain?.today) {
+    const mm = provinceRain.today.max_mm || 0;
+    const d3 = (provinceRain.rain3day || []).reduce((a, b) => a + (b || 0), 0);
+    if (mm >= 50) {
+      const label = rainLabel(mm);
+      const national = nationalRiskCap(mm);
+      let level = mm >= 180 ? 3 : mm >= 100 ? 2 : 1;
+      if (d3 >= 250 && level < 3) level += 1; // đất đã bão hòa sau mưa nhiều ngày
+      factors.push({
+        type: 'flash_flood_landslide', source: 'observed', level,
+        title: `${label} vùng núi: ${mm.toFixed(0)}mm/24h tại ${provinceRain.today.station}`,
+        desc: mm >= 100
+          ? `Mưa vượt 100mm/24h — theo khuyến cáo KTTV, vùng núi có nguy cơ LŨ QUÉT và SÁT LỞ ĐẤT cao. `
+            + `Tích lũy 3 ngày ~${d3.toFixed(0)}mm${d3 >= 250 ? ' (đất bão hòa, nguy cơ tăng)' : ''}. `
+            + `Tránh vùng suối, sườn dốc, đường đèo; sẵn sàng sơ tán khi có dấu hiệu.`
+          : `Mưa đầu ngày vượt 50mm/24t — cần theo dõi suối nhỏ, khe mương và sườn núi dễ sạt lở. Tích lũy 3 ngày ~${d3.toFixed(0)}mm.`,
+        locations: 'Vùng núi, suối, đèo trong tỉnh',
+        thresholds_ref: `Khuyến cáo KTTV vùng núi (≥100mm/24h nguy cơ lũ quét, sạt lở); ${REF_QD18}${national ? ` (cấp ${national})` : ''}`,
+      });
+    }
+  }
 
   // --- 1. MƯA QUAN TRẮC TẠI TP (từ 00h hôm nay) ---
   const cityStations = rainStations.filter(s => !s.is_key && s.mm >= 50);
