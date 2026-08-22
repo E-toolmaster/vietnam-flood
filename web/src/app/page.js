@@ -128,7 +128,7 @@ export default function FloodMonitor() {
     };
 
     fetchData();
-    const interval = setInterval(fetchData, 600000); // 10 phút refresh 1 lần
+    const interval = setInterval(fetchData, 900000); // 15 phút, khớp chu kỳ crawler
     const timer = setInterval(() => {
       setCurrentTime(new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }));
     }, 60000);
@@ -147,8 +147,24 @@ export default function FloodMonitor() {
   }
 
   // --- HELPERS & LOGIC ---
-  const riverLevel = monitorData?.river?.current || 0;
+  const hasRiverData = monitorData?.river?.current !== undefined && monitorData?.river?.current !== null;
+  const riverLevel = hasRiverData ? monitorData.river.current : 0;
   const isEstimated = monitorData?.river?.is_estimated === 1;
+
+  // Ngưỡng báo động lấy từ API (single source of truth, crawler là nơi định nghĩa)
+  const BD1 = monitorData?.river?.bd1 ?? 8.0;
+  const BD2 = monitorData?.river?.bd2 ?? 9.5;
+  const BD3 = monitorData?.river?.bd3 ?? 10.5;
+  const RIVER_SCALE_MAX = 12.95; // Đỉnh lũ 2025
+
+  // Phát hiện dữ liệu cũ: updated có dạng "HH:MM DD/MM" — nếu không phải hôm nay thì đang stale
+  const riverUpdated = monitorData?.river?.updated || '';
+  const isRiverStale = (() => {
+    const m = /^(\d{1,2}):(\d{2})\s+(\d{1,2})\/(\d{1,2})$/.exec(riverUpdated.trim());
+    if (!m) return false;
+    const now = new Date();
+    return +m[3] !== now.getDate() || +m[4] !== now.getMonth() + 1;
+  })();
 
   // XỬ LÝ DỮ LIỆU MƯA THƯỢNG NGUỒN (Lấy từ description hoặc history_json)
   const rainStationList = monitorData?.rain_stations || [];
@@ -164,15 +180,14 @@ export default function FloodMonitor() {
     { name: 'Hôm nay', value: rainToday }
   ];
 
-  const riverUpdated = monitorData?.river?.updated || '';
   const riverDescription = monitorData?.river?.description || '';
   const riverHistory = monitorData?.river?.history || [];
 
   // Xác định trạng thái nguy hiểm
   let dangerLevel = 0;
-  if (riverLevel >= 11.0) dangerLevel = 3;
-  else if (riverLevel >= 9.5) dangerLevel = 2;
-  else if (riverLevel >= 8.0) dangerLevel = 1;
+  if (riverLevel >= BD3) dangerLevel = 3;
+  else if (riverLevel >= BD2) dangerLevel = 2;
+  else if (riverLevel >= BD1) dangerLevel = 1;
 
   // Theme màu theo trạng thái
   const theme = {
@@ -258,14 +273,21 @@ export default function FloodMonitor() {
     }
 
     // 4. Check Lũ Sông Cái thực tế
-    if (riverLevel > 11.0) { // BĐ3
+    if (!hasRiverData) {
+      risks.push({
+        type: 'no_data', level: 'high', title: 'Không có dữ liệu mực nước',
+        desc: 'Không lấy được số đo trạm Đồng Trăng. Hiện trạng "an toàn" ở trên không đáng tin — hãy kiểm tra nguồn chính thống.',
+        locations: ''
+      });
+      riskLevel = Math.max(riskLevel, 2);
+    } else if (riverLevel >= BD3) { // BĐ3
        risks.push({
         type: 'river_flood_3', level: 'high', title: 'Lũ khẩn cấp (Trên BĐ3)',
-        desc: `Nước sông rất cao (${riverLevel}m). Ngập lụt nghiêm trọng diện rộng.`,
+        desc: `Nước sông rất cao (${riverLevel.toFixed(2)}m). Ngập lụt nghiêm trọng diện rộng.`,
         locations: 'Tây Nha Trang, H. Diên Khánh'
       });
       riskLevel = 3;
-    } else if (riverLevel > 9.5) { // BĐ2
+    } else if (riverLevel >= BD2) { // BĐ2
        risks.push({
         type: 'river_flood_2', level: 'high', title: 'Lũ báo động 2',
         desc: `Nước sông dâng cao (${riverLevel}m). Ngập lụt vùng ven sông.`,
@@ -308,7 +330,22 @@ export default function FloodMonitor() {
 
       {/* --- MAIN CONTENT --- */}
       <main className="max-w-5xl mx-auto px-4 mt-4 relative z-10 space-y-6">
-        
+
+        {/* 0. CẢNH BÁO DỮ LIỆU CŨ / MẤT */}
+        {(!hasRiverData || isRiverStale) && (
+          <div className="bg-red-100 border border-red-300 rounded-lg px-4 py-3 text-sm text-red-800 flex items-start gap-3 shadow-sm">
+            <AlertTriangle size={20} className="text-red-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold uppercase text-xs mb-0.5">Dữ liệu mực nước {!hasRiverData ? 'không khả dụng' : 'đang lỗi thời'}</p>
+              <p className="text-[13px] leading-relaxed">
+                {!hasRiverData
+                  ? 'Không lấy được số đo từ trạm Đồng Trăng (VNDMS). Mức hiển thị trên trang không đáng tin.'
+                  : `Số đo mới nhất là lúc ${riverUpdated} — không phải hôm nay. Nguồn VNDMS có thể đang lỗi, hãy đối chiếu nguồn chính thống.`}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* 1. NOTE UPDATE */}
         <div className="bg-white/90 backdrop-blur shadow-sm rounded-lg px-4 py-2 text-xs text-slate-500 flex justify-center items-center gap-2 border border-slate-200 mx-2 sm:mx-0">
           <Activity size={14} className="text-blue-500" />
@@ -332,14 +369,15 @@ export default function FloodMonitor() {
               
               <div className="flex items-end gap-3 mb-4">
                 <span className="text-7xl font-black tracking-tighter leading-none">
-                  {riverLevel.toFixed(2)}
+                  {hasRiverData ? riverLevel.toFixed(2) : '--'}
                 </span>
                 <div className="mb-2">
                   <div className="text-2xl font-medium">mét</div>
                   <div className={`text-xs px-2 py-0.5 rounded uppercase font-bold inline-block mt-1
                     ${dangerLevel >= 2 ? 'bg-white text-red-600 animate-pulse' : 'bg-white/20 text-white'}`}>
-                    {dangerLevel === 3 ? 'BÁO ĐỘNG 3 (KHẨN CẤP)' : 
-                     dangerLevel === 2 ? 'BÁO ĐỘNG 2 (NGUY HIỂM)' : 
+                    {!hasRiverData ? 'KHÔNG CÓ DỮ LIỆU' :
+                     dangerLevel === 3 ? 'BÁO ĐỘNG 3 (KHẨN CẤP)' :
+                     dangerLevel === 2 ? 'BÁO ĐỘNG 2 (NGUY HIỂM)' :
                      dangerLevel === 1 ? 'Báo động 1 (Lưu ý)' : 'Mức an toàn'}
                   </div>
                 </div>
@@ -379,33 +417,33 @@ export default function FloodMonitor() {
               )}
 
               {/* Thanh đo trực quan */}
-              <div className="relative w-full mb-8 mt-4 px-1"> 
+              <div className="relative w-full mb-8 mt-4 px-1">
                  <div className="w-full bg-black/30 h-4 rounded-full overflow-hidden relative border border-white/10">
-                    <div className="absolute top-0 bottom-0 w-[2px] bg-yellow-400 z-30 shadow-[0_0_8px_rgba(250,204,21,1)]" style={{ left: '61.77%' }} title="Báo động 1: 8.0m"></div>
-                    <div className="absolute top-0 bottom-0 w-[2px] bg-orange-500 z-30 shadow-[0_0_8px_rgba(249,115,22,1)]" style={{ left: '73.36%' }} title="Báo động 2: 9.5m"></div>
-                    <div className="absolute top-0 bottom-0 w-[2px] bg-red-600 z-30 shadow-[0_0_8px_rgba(220,38,38,1)] animate-pulse" style={{ left: '84.94%' }} title="Báo động 3: 11.0m"></div>
+                    <div className="absolute top-0 bottom-0 w-[2px] bg-yellow-400 z-30 shadow-[0_0_8px_rgba(250,204,21,1)]" style={{ left: `${(BD1 / RIVER_SCALE_MAX) * 100}%` }} title={`Báo động 1: ${BD1}m`}></div>
+                    <div className="absolute top-0 bottom-0 w-[2px] bg-orange-500 z-30 shadow-[0_0_8px_rgba(249,115,22,1)]" style={{ left: `${(BD2 / RIVER_SCALE_MAX) * 100}%` }} title={`Báo động 2: ${BD2}m`}></div>
+                    <div className="absolute top-0 bottom-0 w-[2px] bg-red-600 z-30 shadow-[0_0_8px_rgba(220,38,38,1)] animate-pulse" style={{ left: `${(BD3 / RIVER_SCALE_MAX) * 100}%` }} title={`Báo động 3: ${BD3}m`}></div>
 
-                    <div 
+                    <div
                       className={`h-full transition-all duration-1000 ease-out relative ${dangerLevel >= 2 ? 'bg-gradient-to-r from-orange-500 to-red-600' : 'bg-gradient-to-r from-cyan-400 to-green-400'}`}
-                      style={{ width: `${Math.min((riverLevel / 12.95) * 100, 100)}%` }} 
+                      style={{ width: `${Math.min((riverLevel / RIVER_SCALE_MAX) * 100, 100)}%` }}
                     >
                         <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-white shadow-[0_0_10px_white]"></div>
                     </div>
                  </div>
-                 
+
                  <div className="relative h-6 text-[9px] font-mono font-bold mt-1.5 select-none w-full">
                     <span className="absolute left-0 text-white/50 -translate-x-1/4">0m</span>
-                    <div className="absolute flex flex-col items-center gap-0.5 -translate-x-1/2" style={{ left: '61.77%' }}>
+                    <div className="absolute flex flex-col items-center gap-0.5 -translate-x-1/2" style={{ left: `${(BD1 / RIVER_SCALE_MAX) * 100}%` }}>
                         <span className="text-yellow-300 leading-none">BĐ1</span>
-                        <span className="text-yellow-300/50 text-[8px] leading-none">8.0</span>
+                        <span className="text-yellow-300/50 text-[8px] leading-none">{BD1.toFixed(1)}</span>
                     </div>
-                    <div className="absolute flex flex-col items-center gap-0.5 -translate-x-1/2" style={{ left: '73.36%' }}>
+                    <div className="absolute flex flex-col items-center gap-0.5 -translate-x-1/2" style={{ left: `${(BD2 / RIVER_SCALE_MAX) * 100}%` }}>
                         <span className="text-orange-300 leading-none">BĐ2</span>
-                        <span className="text-orange-300/50 text-[8px] leading-none">9.5</span>
+                        <span className="text-orange-300/50 text-[8px] leading-none">{BD2.toFixed(1)}</span>
                     </div>
-                    <div className="absolute flex flex-col items-center gap-0.5 -translate-x-1/2" style={{ left: '84.94%' }}>
+                    <div className="absolute flex flex-col items-center gap-0.5 -translate-x-1/2" style={{ left: `${(BD3 / RIVER_SCALE_MAX) * 100}%` }}>
                         <span className="text-red-400 leading-none">BĐ3</span>
-                        <span className="text-red-400/50 text-[8px] leading-none">11.0</span>
+                        <span className="text-red-400/50 text-[8px] leading-none">{BD3.toFixed(1)}</span>
                     </div>
                     <div className="absolute right-0 flex flex-col items-end gap-0.5 translate-x-1/4">
                         <span className="text-white/60 leading-none">Đỉnh lũ 2025</span>
@@ -561,7 +599,9 @@ export default function FloodMonitor() {
                 ) : (
                   <div className="bg-green-100/50 rounded-lg p-4 border border-green-200">
                      <p className="text-sm text-green-800">
-                       Dựa vào lượng mưa tích lũy 3 ngày ({rain3daySum.toFixed(1)}mm) và mực nước sông hiện tại ({monitorData?.river?.current}m), chưa phát hiện nguy cơ ngập lụt diện rộng.
+                       {hasRiverData
+                         ? `Dựa vào lượng mưa tích lũy 3 ngày (${rain3daySum.toFixed(1)}mm) và mực nước sông hiện tại (${riverLevel.toFixed(2)}m), chưa phát hiện nguy cơ ngập lụt diện rộng.`
+                         : 'Không có dữ liệu mực nước sông để đánh giá. Vui lòng tham khảo nguồn chính thống.'}
                      </p>
                   </div>
                 )}

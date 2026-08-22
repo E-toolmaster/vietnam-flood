@@ -17,6 +17,18 @@ TZ_VN = pytz.timezone("Asia/Ho_Chi_Minh")
 URL_XA_HOI = "https://baokhanhhoa.vn/xa-hoi/"
 URL_VRAIN = "https://vrain.vn/37/overview?public_map=windy"
 
+# VNDMS đã đổi tên miền từ vndms.dmptc.gov.vn -> vndms.gov.vn (domain cũ chỉ trả
+# trang HTML "chuyển đổi tên miền"). Domain mới chặn 403 nếu thiếu UA/Referer trình duyệt.
+VNDMS_BASE = "https://vndms.gov.vn"
+VNDMS_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+    ),
+    "Referer": "https://vndms.gov.vn/",
+    "Accept": "application/json, text/plain, */*",
+}
+
 # Mức báo động Sông Cái
 FLOOD_LEVELS = {
     "bao_dong_1": 8.0,
@@ -332,15 +344,15 @@ def crawl_song_cai_from_vndms():
     print("\n🌊 [3/5] Mực nước Sông Cái (Time nguồn chính xác)...")
     try:
         ensure_metrics_columns()
-        headers = {"User-Agent": "Mozilla/5.0"}
+        headers = VNDMS_HEADERS
         result_obj = {"station_info": {}, "water_levels": []}
-        
+
         level_now = None
         source_time_str = ""
         found_data = False
-        
+
         for lv in [0, 1, 2, 3]:
-            url = f"https://vndms.dmptc.gov.vn/water_level?lv={lv}"
+            url = f"{VNDMS_BASE}/water_level?lv={lv}"
             try:
                 r = requests.get(url, headers=headers, timeout=10)
                 if r.status_code != 200: continue
@@ -461,9 +473,8 @@ def crawl_reservoirs_from_vndms():
             "đá bàn": "Hồ Đá Bàn",
         }
 
-        url = "https://vndms.dmptc.gov.vn/pctt?dangxa=0"
-        headers = {"User-Agent": "Mozilla/5.0"}
-        r = requests.get(url, headers=headers, timeout=15)
+        url = f"{VNDMS_BASE}/pctt?dangxa=0"
+        r = requests.get(url, headers=VNDMS_HEADERS, timeout=15)
         geo = r.json()
 
         conn = sqlite3.connect(DB_PATH)
@@ -495,7 +506,8 @@ def crawl_reservoirs_from_vndms():
             if level is None: level = props.get("tdmucnuoc")
             if volume is None: volume = props.get("tddungtich")
 
-            tskt = props.get("thong_so_ky_thuat", {})
+            # API mới trả null thay cho object rỗng khi hồ không có hồ sơ kỹ thuật
+            tskt = props.get("thong_so_ky_thuat") or {}
             max_cap = tskt.get("dungtichtoanbo")
             if max_cap is None: max_cap = props.get("dungtichtoanbo")
             try: max_cap = float(max_cap)
@@ -685,6 +697,7 @@ if __name__ == "__main__":
         
         crawl_open_meteo() # Chạy trước (không update time)
         vrain_ok = crawl_vrain() # Chạy vrain
+        override_rain_with_vrain(vrain_ok) # Override bằng Vrain nếu crawl thành công
         calculate_upstream_list(vrain_ok)
         
         crawl_song_cai_from_vndms()

@@ -90,6 +90,7 @@ export async function GET() {
 
         metrics[keyName] = {
           name: row.name,
+          type: row.type, // page.js lọc theo 'reservoir' để cảnh báo xả lũ
           current: row.value,
           updated: row.updated_at,
           news_time: row.news_time,
