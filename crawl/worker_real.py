@@ -299,6 +299,35 @@ def ensure_tables_and_columns():
         else:
             c.execute("CREATE TABLE river_history (station TEXT, ts TEXT, level REAL, PRIMARY KEY(station, ts))")
 
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS metrics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT, value REAL, updated_at TEXT, description TEXT, source_link TEXT,
+                is_estimated INTEGER DEFAULT 0, history_json TEXT, news_time TEXT,
+                q_in REAL, q_out REAL, level_now REAL, volume_now REAL, max_capacity REAL,
+                type TEXT, province TEXT DEFAULT 'khanh-hoa',
+                UNIQUE(name, province)
+            )
+        """)
+
+        # metrics: đổi UNIQUE(name) cũ -> UNIQUE(name, province) để các tỉnh
+        # dùng chung tên metric (Du_Bao_Mua_24h, trạm trùng tên...)
+        sql_def = c.execute("SELECT sql FROM sqlite_master WHERE name='metrics'").fetchone()
+        if sql_def and "name TEXT UNIQUE" in sql_def[0]:
+            c.execute("""CREATE TABLE metrics_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT, value REAL, updated_at TEXT, description TEXT, source_link TEXT,
+                is_estimated INTEGER DEFAULT 0, history_json TEXT, news_time TEXT,
+                q_in REAL, q_out REAL, level_now REAL, volume_now REAL, max_capacity REAL,
+                type TEXT, province TEXT DEFAULT 'khanh-hoa',
+                UNIQUE(name, province))""")
+            c.execute("""INSERT OR IGNORE INTO metrics_new
+                SELECT id, name, value, updated_at, description, source_link, is_estimated,
+                       history_json, news_time, q_in, q_out, level_now, volume_now, max_capacity,
+                       type, province FROM metrics""")
+            c.execute("DROP TABLE metrics")
+            c.execute("ALTER TABLE metrics_new RENAME TO metrics")
+
         # metrics/alerts: thêm province, backfill khanh-hoa
         for tbl in ("metrics", "alerts"):
             cols = [i[1] for i in c.execute(f"PRAGMA table_info({tbl})").fetchall()]
