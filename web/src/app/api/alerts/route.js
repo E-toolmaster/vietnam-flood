@@ -44,6 +44,8 @@ export async function GET(request) {
         metrics.river = {
           name: row.name,
           current: row.value,
+          lat: row.lat ?? null,
+          lon: row.lon ?? null,
           bd1: null, bd2: null, bd3: null, // ngưỡng riêng mỗi trạm — crawler sẽ ghi đè ở dưới
           history: historyChart,
           updated: row.updated_at,
@@ -90,6 +92,8 @@ export async function GET(request) {
           level_now: row.level_now ?? null,
           volume_now: row.volume_now ?? null,
           max_capacity: row.max_capacity ?? 0,
+          lat: row.lat ?? null,
+          lon: row.lon ?? null,
           description: row.description || '',
         };
       }

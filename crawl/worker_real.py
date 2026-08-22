@@ -351,6 +351,8 @@ def ensure_tables_and_columns():
             "volume_now": "ALTER TABLE metrics ADD COLUMN volume_now REAL",
             "max_capacity": "ALTER TABLE metrics ADD COLUMN max_capacity REAL",
             "type": "ALTER TABLE metrics ADD COLUMN type TEXT",
+            "lat": "ALTER TABLE metrics ADD COLUMN lat REAL",
+            "lon": "ALTER TABLE metrics ADD COLUMN lon REAL",
         }
         for col, sql in add_cols.items():
             if col not in cols:
@@ -661,6 +663,12 @@ def crawl_rivers_vndms():
                 if not found or level_now is None:
                     continue
 
+                # Tọa độ trạm (geometry [lon, lat]) cho bản đồ 2.5D
+                coords = ft.get("geometry", {}).get("coordinates")
+                st_lat = st_lon = None
+                if coords and len(coords) >= 2:
+                    st_lon, st_lat = coords[0], coords[1]
+
                 result_obj = {"station_info": {}, "water_levels": water_levels}
                 final_time = source_time_str or datetime.now(TZ_VN).strftime("%H:%M %d/%m")
                 bd1, bd2, bd3 = (st_cfg.get("bd1"), st_cfg.get("bd2"), st_cfg.get("bd3"))
@@ -671,15 +679,17 @@ def crawl_rivers_vndms():
 
                 c.execute(
                     """UPDATE metrics SET value=?, updated_at=?, description=?, source_link='',
-                             is_estimated=0, history_json=?, type='river' WHERE name=? AND province=?""",
-                    (level_now, final_time, desc, json.dumps(result_obj, ensure_ascii=False), metric_name, code),
+                             is_estimated=0, history_json=?, type='river', lat=?, lon=?
+                       WHERE name=? AND province=?""",
+                    (level_now, final_time, desc, json.dumps(result_obj, ensure_ascii=False),
+                     st_lat, st_lon, metric_name, code),
                 )
                 if c.rowcount == 0:
                     c.execute(
-                        """INSERT INTO metrics (name, type, value, updated_at, description, history_json, province)
-                           VALUES (?, 'river', ?, ?, ?, ?, ?)""",
+                        """INSERT INTO metrics (name, type, value, updated_at, description, history_json, province, lat, lon)
+                           VALUES (?, 'river', ?, ?, ?, ?, ?, ?, ?)""",
                         (metric_name, level_now, final_time, desc,
-                         json.dumps(result_obj, ensure_ascii=False), code),
+                         json.dumps(result_obj, ensure_ascii=False), code, st_lat, st_lon),
                     )
                 count += 1
                 # commit trước khi save_river_history mở connection khác,
@@ -715,7 +725,7 @@ def crawl_reservoirs_vndms():
         c = conn.cursor()
         total = 0
 
-        def upsert_ho(db_name, code, props):
+        def upsert_ho(db_name, code, props, ft=None):
             nonlocal total
             data_list = props.get("data", [])
             latest = data_list[0] if data_list else {}
@@ -723,6 +733,17 @@ def crawl_reservoirs_vndms():
             volume = latest.get("tddungtich")
             if level is None: level = props.get("tdmucnuoc")
             if volume is None: volume = props.get("tddungtich")
+
+            # Tọa độ hồ cho bản đồ 2.5D
+            ho_lat = props.get("lat") or props.get("vido")
+            ho_lon = props.get("lng") or props.get("kinhdo")
+            geom = (ft or {}).get("geometry") or {}
+            if geom.get("type") == "Point" and geom.get("coordinates"):
+                ho_lon, ho_lat = geom["coordinates"][0], geom["coordinates"][1]
+            try: ho_lat = float(ho_lat) if ho_lat is not None else None
+            except Exception: ho_lat = None
+            try: ho_lon = float(ho_lon) if ho_lon is not None else None
+            except Exception: ho_lon = None
 
             tskt = props.get("thong_so_ky_thuat") or {}
             max_cap = tskt.get("dungtichtoanbo")
@@ -761,18 +782,18 @@ def crawl_reservoirs_vndms():
 
             c.execute(
                 """UPDATE metrics SET value=?, updated_at=?, description=?, q_in=?, q_out=?, news_time=?,
-                         level_now=?, volume_now=?, max_capacity=?
+                         level_now=?, volume_now=?, max_capacity=?, lat=?, lon=?
                    WHERE name=? AND province=?""",
                 (level or 0, final_updated_at, desc, q_in, final_q_out, final_updated_at,
-                 level, volume, max_cap, db_name, code),
+                 level, volume, max_cap, ho_lat, ho_lon, db_name, code),
             )
             if c.rowcount == 0:
                 c.execute(
                     """INSERT INTO metrics (name, type, value, updated_at, description, q_in, q_out,
-                                            news_time, level_now, volume_now, max_capacity, province)
-                       VALUES (?, 'reservoir', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                                            news_time, level_now, volume_now, max_capacity, province, lat, lon)
+                       VALUES (?, 'reservoir', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (db_name, level or 0, final_updated_at, desc, q_in, final_q_out,
-                     final_updated_at, level, volume, max_cap, code),
+                     final_updated_at, level, volume, max_cap, code, ho_lat, ho_lon),
                 )
             total += 1
 

@@ -11,7 +11,8 @@
 
 const REF_KTTV = 'Phân loại mưa KTTV (mm/24h)';
 const REF_QD18 = 'Điều 44 QĐ 18/2021/QĐ-TTg';
-const REF_LOCAL = 'Khuyến nghị địa phương Nha Trang';
+// Ngưỡng thực nghiệm cho vùng trũng/ven sông — dùng chung mọi tỉnh, không gắn tên tỉnh
+const REF_LOCAL = 'Khuyến nghị thực nghiệm địa phương (vùng trũng ven sông, ≥50mm/24h)';
 
 // Phân loại theo tổng mm/24h (dùng cho badge + cảnh báo quan trắc)
 export function rainLabel(mm) {
@@ -89,12 +90,12 @@ export function computeRisk({ rainStations = [], upstreamList = [], forecast = n
     const level = national > 0 ? Math.max(2, national) : 2; // ≥50mm = ngập cục bộ đô thị tối thiểu mức 2
     factors.push({
       type: 'city_rain', source: 'observed', level,
-      title: `${label} ghi nhận tại các trạm trong tỉnh (${maxCity.toFixed(0)}mm từ 00h)`,
+      title: `${label} ghi nhận tại các trạm trong tỉnh (${maxCity.toFixed(0)}mm/24h)`,
       desc: maxCity > 100
-        ? `Tổng mưa ngày đã vượt 100mm — theo ${REF_KTTV} là mưa rất to. Nguy cơ ngập sâu các tuyến trũng, hạn chế di chuyển vùng trũng/ven suối.`
-        : `Tổng mưa ngày vượt 50mm — đủ gây ngập úng cục bộ theo ${REF_LOCAL}.`,
+        ? `Tổng mưa vượt 100mm/24h — theo ${REF_KTTV} là mưa rất to. Nguy cơ ngập sâu các tuyến trũng, hạn chế di chuyển vùng trũng/ven suối.`
+        : `Tổng mưa vượt 50mm/24h — đủ gây ngập úng cục bộ theo ngưỡng thực nghiệm địa phương.`,
       stations: cityStations.map(s => s.station_name),
-      thresholds_ref: `${REF_KTTV}; ${REF_LOCAL} ≥50mm/24h`,
+      thresholds_ref: `${REF_KTTV}; ${REF_LOCAL}`,
     });
   }
 

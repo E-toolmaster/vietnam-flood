@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   BarChart, Bar, Tooltip, ResponsiveContainer,
   LineChart, Line, XAxis, YAxis, CartesianGrid
@@ -9,6 +9,7 @@ import {
   Waves, ShieldAlert, MapPin, Clock, Activity, FileText, Radar, TrendingUp
 } from 'lucide-react';
 import { rainLabel } from './api/risk-engine';
+import 'maplibre-gl/dist/maplibre-gl.css';
 
 // === CẤU HÌNH ===
 const ZONE_MAP = {
@@ -76,6 +77,138 @@ const levelColor = (lv) =>
   : lv === 2 ? { bg: 'bg-red-600', grad: 'from-red-600 via-red-500 to-red-700', text: 'text-red-600', border: '#dc2626' }
   : lv === 1 ? { bg: 'bg-amber-500', grad: 'from-amber-500 via-amber-400 to-amber-600', text: 'text-amber-600', border: '#f59e0b' }
   : { bg: 'bg-blue-600', grad: 'from-blue-600 via-blue-500 to-blue-700', text: 'text-blue-600', border: '#22c55e' };
+
+// === BẢN ĐỒ 2.5D (MapLibre, pitch ~52°) — điểm quan trắc + vùng cảnh báo ngập ===
+function RiskMap({ center, province, provinceName, river, riverDanger, reservoirs, riskLevel, rainMm }) {
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    let map = null;
+    let destroyed = false;
+    const cleanups = [];
+
+    import('maplibre-gl').then((mod) => {
+      const maplibregl = mod.default;
+      if (destroyed || !containerRef.current) return;
+
+      map = new maplibregl.Map({
+        container: containerRef.current,
+        style: {
+          version: 8,
+          sources: {
+            sat: {
+              type: 'raster',
+              tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+              tileSize: 256,
+              attribution: 'Ảnh nền: Esri, Maxar',
+            },
+            labels: {
+              type: 'raster',
+              tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],
+              tileSize: 256,
+            },
+          },
+          layers: [
+            { id: 'sat', type: 'raster', source: 'sat' },
+            { id: 'labels', type: 'raster', source: 'labels', paint: { 'raster-opacity': 0.85 } },
+          ],
+        },
+        center: [center.lon, center.lat],
+        zoom: 7.6,
+        pitch: 52,
+        bearing: -18,
+      });
+      map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
+
+      const markerEl = (color, label, pulse, big) => {
+        const el = document.createElement('div');
+        el.style.cssText = 'display:flex;align-items:center;gap:5px;cursor:pointer;';
+        const dot = document.createElement('div');
+        dot.style.cssText = `width:${big ? 16 : 11}px;height:${big ? 16 : 11}px;border-radius:9999px;background:${color};border:2px solid rgba(255,255,255,.92);box-shadow:0 0 10px ${color};`;
+        if (pulse) dot.classList.add('map-pulse');
+        el.appendChild(dot);
+        if (label) {
+          const tag = document.createElement('span');
+          tag.style.cssText = 'background:rgba(2,6,23,.78);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px;white-space:nowrap;';
+          tag.textContent = label;
+          el.appendChild(tag);
+        }
+        return el;
+      };
+
+      const addMarker = (lng, lat, color, label, html, pulse, big) => {
+        if (lng == null || lat == null) return;
+        const m = new maplibregl.Marker({ element: markerEl(color, label, pulse, big) })
+          .setLngLat([lng, lat])
+          .setPopup(new maplibregl.Popup({ offset: 14, maxWidth: '240px' }).setHTML(html))
+          .addTo(map);
+        cleanups.push(() => m.remove());
+      };
+
+      map.on('load', () => {
+        // Vùng cảnh báo ngập (phản ánh rủi ro hiện tại, không phải ranh ngập thật)
+        if (riskLevel >= 2 && river?.lat != null) {
+          map.addSource('floodzone', {
+            type: 'geojson',
+            data: { type: 'Feature', geometry: { type: 'Point', coordinates: [river.lon, river.lat] }, properties: {} },
+          });
+          map.addLayer({
+            id: 'floodring', type: 'circle', source: 'floodzone',
+            paint: {
+              'circle-radius': riskLevel >= 3 ? 26 : 15,
+              'circle-color': '#ef4444', 'circle-opacity': 0.16,
+              'circle-stroke-color': '#ef4444', 'circle-stroke-width': 1.3, 'circle-stroke-opacity': 0.75,
+            },
+          });
+        }
+
+        // Trạm sông
+        if (river?.lat != null) {
+          const rising = (river.history48h?.length || 0) >= 2 &&
+            river.history48h[river.history48h.length - 1].value > river.history48h[0].value;
+          const color = riverDanger ? '#dc2626' : rising ? '#f59e0b' : '#0ea5e9';
+          addMarker(river.lon, river.lat, color,
+            `${river.current != null ? river.current.toFixed(2) + 'm' : river.name}`,
+            `<b>${river.name}</b><br/>Mực nước: <b>${river.current != null ? river.current.toFixed(2) + ' m' : '--'}</b><br/>Cập nhật: ${river.updated || '--'}<br/>${riverDanger ? '<span style="color:#dc2626;font-weight:700;">⚠ Vượt ngưỡng báo động</span>' : rising ? '<span style="color:#f59e0b;">Đang dâng</span>' : 'Ổn định'}`,
+            riverDanger, riverDanger);
+        }
+
+        // Hồ chứa
+        for (const h of reservoirs) {
+          const pct = h.max_capacity > 0 ? Math.min(Math.round((h.volume_now / h.max_capacity) * 100), 100) : 0;
+          const discharging = h.q_out != null && h.q_out > 0;
+          const color = discharging ? '#dc2626' : pct >= 85 ? '#f97316' : '#06b6d4';
+          addMarker(h.lon, h.lat, color, `${pct}%`,
+            `<b>${h.name}</b><br/>Mực nước: <b>${h.level_now != null ? h.level_now.toFixed(2) + ' m' : '--'}</b><br/>Dung tích: ${pct}%<br/>Xả: ${h.q_out != null ? h.q_out + ' m³/s' : '--'}${discharging ? '<br/><span style="color:#dc2626;font-weight:700;">⚠ Đang xả lũ</span>' : ''}`,
+            discharging, false);
+        }
+
+        // Điểm cảnh báo mưa tại tâm tỉnh
+        if (rainMm >= 25) {
+          const color = riskLevel >= 2 ? '#dc2626' : '#f59e0b';
+          addMarker(center.lon, center.lat, color, `${rainMm.toFixed(0)}mm`,
+            `<b>${provinceName}</b><br/>Mưa tối đa 24h: <b>${rainMm.toFixed(1)} mm</b>${riskLevel >= 2 ? '<br/><span style="color:#dc2626;font-weight:700;">⚠ Nguy cơ ngập lụt / lũ quét</span>' : ''}`,
+            riskLevel >= 2, riskLevel >= 2);
+        }
+      });
+    });
+
+    return () => {
+      destroyed = true;
+      cleanups.forEach(fn => fn());
+      if (map) map.remove();
+    };
+  }, [province]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div className="relative">
+      <div ref={containerRef} className="w-full rounded-xl overflow-hidden" style={{ height: 430 }} />
+      <div className="absolute bottom-2 left-2 z-10 bg-slate-900/80 text-white text-[10px] px-2.5 py-1.5 rounded-lg flex gap-3">
+        <span>🔴 cảnh báo</span><span>🟠 dâng/gần đầy</span><span>🔵 ổn định</span>
+      </div>
+    </div>
+  );
+}
 
 export default function FloodMonitor() {
   const [province, setProvince] = useState('khanh-hoa');
@@ -594,6 +727,28 @@ export default function FloodMonitor() {
             </div>
           </div>
         </div>
+
+        {/* 2.4. BẢN ĐỒ 2.5D — điểm quan trắc & vùng cảnh báo */}
+        <section className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50 flex-wrap gap-1">
+            <h2 className="font-bold text-slate-800 flex items-center gap-2 text-sm uppercase tracking-wide">
+              <MapPin className="w-4 h-4 text-red-500" /> Bản đồ 2.5D — điểm quan trắc &amp; vùng cảnh báo
+            </h2>
+            <span className="text-[10px] text-slate-400">kéo để xoay • Ctrl+kéo để nghiêng • bấm chấm xem chi tiết</span>
+          </div>
+          <div className="p-2">
+            <RiskMap
+              center={center}
+              province={province}
+              provinceName={currentName}
+              river={hasRiverData ? { ...monitorData.river } : null}
+              riverDanger={hasBD && dangerLevel >= 2}
+              reservoirs={reservoirs}
+              riskLevel={riskLevel}
+              rainMm={mRain ? mRain.max_mm : 0}
+            />
+          </div>
+        </section>
 
         {/* 2.5. RADAR MƯA 2D */}
         <section className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
