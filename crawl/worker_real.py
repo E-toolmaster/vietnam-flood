@@ -629,6 +629,9 @@ def crawl_rivers_vndms():
                          json.dumps(result_obj, ensure_ascii=False), code),
                     )
                 count += 1
+                # commit trước khi save_river_history mở connection khác,
+                # tránh lỗi SQLite "database is locked"
+                conn.commit()
                 save_river_history(metric_name, level_now, source_time_str, water_levels)
                 print(f"  ✅ {cfg['name']} | {label}: {level_now}m | {final_time}")
 
