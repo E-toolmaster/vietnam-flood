@@ -89,10 +89,10 @@ export function computeRisk({ rainStations = [], upstreamList = [], forecast = n
     const level = national > 0 ? Math.max(2, national) : 2; // ≥50mm = ngập cục bộ đô thị tối thiểu mức 2
     factors.push({
       type: 'city_rain', source: 'observed', level,
-      title: `${label} tại khu vực TP (${maxCity.toFixed(0)}mm từ 00h)`,
+      title: `${label} ghi nhận tại các trạm trong tỉnh (${maxCity.toFixed(0)}mm từ 00h)`,
       desc: maxCity > 100
-        ? `Tổng mưa ngày đã vượt 100mm — theo ${REF_KTTV} là mưa rất to. Nguy cơ ngập sâu các tuyến trũng, nên tránh di chuyển vùng ven sông.`
-        : `Tổng mưa ngày vượt 50mm — đủ gây ngập úng cục bộ đô thị theo ${REF_LOCAL}.`,
+        ? `Tổng mưa ngày đã vượt 100mm — theo ${REF_KTTV} là mưa rất to. Nguy cơ ngập sâu các tuyến trũng, hạn chế di chuyển vùng trũng/ven suối.`
+        : `Tổng mưa ngày vượt 50mm — đủ gây ngập úng cục bộ theo ${REF_LOCAL}.`,
       stations: cityStations.map(s => s.station_name),
       thresholds_ref: `${REF_KTTV}; ${REF_LOCAL} ≥50mm/24h`,
     });
@@ -133,33 +133,38 @@ export function computeRisk({ rainStations = [], upstreamList = [], forecast = n
     });
   }
 
-  // --- 4. MỰC NƯỚC SÔNG CÁI (quan trắc + xu hướng dâng) ---
+  // --- 4. MỰC NƯỚC SÔNG (quan trắc + xu hướng dâng) ---
   if (river && river.hasData && typeof river.current === 'number') {
-    const { current, bd1 = 8.0, bd2 = 9.5, bd3 = 10.5 } = river;
-    if (current >= bd3) {
-      factors.push({
-        type: 'river_flood_3', source: 'observed', level: 3,
-        title: `Lũ khẩn cấp — mực nước trên BĐ3 (${current.toFixed(2)}m)`,
-        desc: `Mực nước sông Cái tại Đồng Trăng ${current.toFixed(2)}m, trên báo động 3 (${bd3}m). Ngập lụt nghiêm trọng diện rộng vùng ven sông.`,
-        locations: 'Tây Nha Trang, H. Diên Khánh',
-        thresholds_ref: `Ngưỡng báo động trạm Đồng Trăng (BĐ3 = ${bd3}m)`,
-      });
-    } else if (current >= bd2) {
-      factors.push({
-        type: 'river_flood_2', source: 'observed', level: 2,
-        title: `Lũ báo động 2 (${current.toFixed(2)}m)`,
-        desc: `Mực nước sông Cái ${current.toFixed(2)}m, đạt báo động 2 (${bd2}m). Ngập lụt vùng ven sông, cần sẵn sàng di chuyển.`,
-        locations: 'Tây Nha Trang (Vĩnh Ngọc, Vĩnh Thạnh), H. Diên Khánh',
-        thresholds_ref: `Ngưỡng báo động trạm Đồng Trăng (BĐ2 = ${bd2}m)`,
-      });
-    } else if (current >= bd1) {
-      factors.push({
-        type: 'river_flood_1', source: 'observed', level: 1,
-        title: `Mực nước đạt báo động 1 (${current.toFixed(2)}m)`,
-        desc: `Mực nước sông Cái ${current.toFixed(2)}m, đạt báo động 1 (${bd1}m). Theo dõi sát diễn biến, vùng trũng ven sông cần chú ý.`,
-        locations: 'Vùng trũng ven sông Cái',
-        thresholds_ref: `Ngưỡng báo động trạm Đồng Trăng (BĐ1 = ${bd1}m)`,
-      });
+    const { current } = river;
+    const bd1 = river.bd1 ?? null, bd2 = river.bd2 ?? null, bd3 = river.bd3 ?? null;
+    // Chỉ đánh giá theo ngưỡng BĐ khi trạm có đủ BĐ1-3 (trạm không có ngưỡng
+    // công khai thì tuyệt đối không so với 0 — từng gây cảnh báo giả)
+    if (bd3 != null && bd2 != null && bd1 != null) {
+      if (current >= bd3) {
+        factors.push({
+          type: 'river_flood_3', source: 'observed', level: 3,
+          title: `Lũ khẩn cấp — mực nước trên BĐ3 (${current.toFixed(2)}m)`,
+          desc: `Mực nước tại trạm ${current.toFixed(2)}m, trên báo động 3 (${bd3}m). Ngập lụt nghiêm trọng diện rộng vùng ven sông.`,
+          locations: 'Vùng ven sông',
+          thresholds_ref: `Ngưỡng báo động trạm quan trắc (BĐ3 = ${bd3}m)`,
+        });
+      } else if (current >= bd2) {
+        factors.push({
+          type: 'river_flood_2', source: 'observed', level: 2,
+          title: `Lũ báo động 2 (${current.toFixed(2)}m)`,
+          desc: `Mực nước tại trạm ${current.toFixed(2)}m, đạt báo động 2 (${bd2}m). Ngập lụt vùng ven sông, cần sẵn sàng di chuyển.`,
+          locations: 'Vùng ven sông',
+          thresholds_ref: `Ngưỡng báo động trạm quan trắc (BĐ2 = ${bd2}m)`,
+        });
+      } else if (current >= bd1) {
+        factors.push({
+          type: 'river_flood_1', source: 'observed', level: 1,
+          title: `Mực nước đạt báo động 1 (${current.toFixed(2)}m)`,
+          desc: `Mực nước tại trạm ${current.toFixed(2)}m, đạt báo động 1 (${bd1}m). Theo dõi sát diễn biến, vùng trũng ven sông cần chú ý.`,
+          locations: 'Vùng trũng ven sông',
+          thresholds_ref: `Ngưỡng báo động trạm quan trắc (BĐ1 = ${bd1}m)`,
+        });
+      }
     }
 
     // Xu hướng dâng nhanh (từ river_history tự tích lũy)

@@ -60,8 +60,8 @@ PROVINCES = {
         "name": "Lai Châu", "vrain_id": 7, "kind": "mountain",
         "vndms_places": ["Lai Châu"],
         "river_stations": [
-            {"label": "Tạ Bú", "metric": "Sông Nậm Na (Tạ Bú)"},
-            {"label": "Mường Trai", "metric": "Sông Đà (Mường Trai)"},
+            {"label": "Nậm Nhùn", "metric": "Sông Đà (Nậm Nhùn)"},
+            {"label": "Bình Lư", "metric": "Sông Nậm Bô (Bình Lư)"},
         ],
         "forecast_points": [{"lat": 22.39, "lon": 103.46, "name": "Lai Châu (dự báo)"}],
     },
@@ -69,7 +69,7 @@ PROVINCES = {
         "name": "Điện Biên", "vrain_id": 6, "kind": "mountain",
         "vndms_places": ["Điện Biên"],
         "river_stations": [
-            {"label": "Tà Hộc", "metric": "Sông Mã (Tà Hộc)"},
+            {"label": "Mường Lay", "metric": "Sông Nậm Na (Mường Lay)"},
         ],
         "forecast_points": [{"lat": 21.39, "lon": 103.02, "name": "Điện Biên (dự báo)"}],
     },
@@ -78,6 +78,7 @@ PROVINCES = {
         "vndms_places": ["Sơn La"],
         "river_stations": [
             {"label": "Quỳnh Nhai", "metric": "Sông Đà (Quỳnh Nhai)"},
+            {"label": "Tạ Hộc", "metric": "Sông Nậm Mư (Tạ Hộc)"},
         ],
         "forecast_points": [{"lat": 21.55, "lon": 104.05, "name": "Mường La (dự báo)"}],
     },
@@ -206,6 +207,25 @@ KH_RESERVOIR_MAP = {
     "láng nhớt": "Hồ Láng Nhớt",
     "hoa sơn": "Hồ Hoa Sơn",
     "đá bàn": "Hồ Đá Bàn",
+}
+
+# Alias "tentinh" trong pctt VNDMS (dùng cả tên tỉnh cũ trước sáp nhập + biến thể chính tả)
+RESERVOIR_PLACES = {
+    "khanh-hoa": ["Khánh Hòa", "Ninh Thuận"],
+    "lai-chau": ["Lai Châu"],
+    "dien-bien": ["Điện Biên"],
+    "son-la": ["Sơn La"],
+    "lao-cai": ["Lào Cai", "Yên Bái"],
+    "tuyen-quang": ["Tuyên Quang", "Hà Giang"],
+    "cao-bang": ["Cao Bằng"],
+    "lang-son": ["Lạng Sơn"],
+    "thai-nguyen": ["Thái Nguyên", "Bắc Kạn"],
+    "phu-tho": ["Phú Thọ", "Vĩnh Phúc", "Hòa Bình"],
+    "thanh-hoa": ["Thanh Hóa", "Thanh Hoá"],
+    "nghe-an": ["Nghệ An"],
+    "ha-tinh": ["Hà Tĩnh"],
+    "quang-tri": ["Quảng Trị", "Quảng Bình"],
+    "hue": ["Thừa Thiên Huế", "TP. Huế"],
 }
 
 def normalize_station_key(name):
@@ -739,12 +759,13 @@ def crawl_reservoirs_vndms():
             if db_name:
                 upsert_ho(db_name, "khanh-hoa", props)
 
-        # Tỉnh khác: top 3 hồ theo dung tích tổng
+        # Tỉnh khác: top 3 hồ theo dung tích tổng (dùng alias tên tỉnh, kể cả tỉnh cũ)
         for code, cfg in PROVINCES.items():
             if code == "khanh-hoa":
                 continue
+            places = RESERVOIR_PLACES.get(code, cfg["vndms_places"])
             props_list = []
-            for place in cfg["vndms_places"]:
+            for place in places:
                 for tentinh, pl in by_prov.items():
                     if place.lower() in tentinh.strip().lower():
                         props_list.extend(pl)
