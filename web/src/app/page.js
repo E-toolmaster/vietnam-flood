@@ -179,7 +179,7 @@ function RiskMap({ center, province, provinceName, river, riverDanger, reservoir
             cleanups.push(() => m.remove());
           };
 
-          map.on('load', () => {
+          const setupLayers = () => {
             try { map.setTerrain({ source: 'dem', exaggeration: 1.4 }); } catch (e) { /* DEM lỗi -> map phẳng, vẫn chạy */ }
 
             // --- SÔNG CHÍNH: nền xanh đậm + DÒNG CHẢY cyan chạy động theo hướng ---
@@ -275,7 +275,22 @@ function RiskMap({ center, province, provinceName, river, riverDanger, reservoir
               }, 700);
             }
 
-            // --- Markers như cũ ---
+          };
+
+          // Layers cần style ready — nếu event load không bao giờ đến (mạng chậm/DEM stall),
+          // poll isStyleLoaded() như fallback
+          let layersDone = false;
+          const trySetupLayers = () => {
+            if (layersDone || !map) return;
+            if (map.isStyleLoaded()) { layersDone = true; setupLayers(); }
+            else setTimeout(trySetupLayers, 1000);
+          };
+          map.on('load', () => { if (!layersDone) { layersDone = true; setupLayers(); } });
+          trySetupLayers();
+          setTimeout(trySetupLayers, 9000);
+
+          // --- Markers gắn NGAY (không chờ style/load) ---
+          {
             if (river?.lat != null) {
               const rising = (river.history48h?.length || 0) >= 2 &&
                 river.history48h[river.history48h.length - 1].value > river.history48h[0].value;
@@ -301,7 +316,7 @@ function RiskMap({ center, province, provinceName, river, riverDanger, reservoir
                 `<b>${provinceName}</b><br/>Mưa tối đa 24h: <b>${rainMm.toFixed(1)} mm</b>${riskLevel >= 2 ? '<br/><span style="color:#dc2626;font-weight:700;">⚠ Nguy cơ ngập lụt / lũ quét</span>' : ''}`,
                 riskLevel >= 2, riskLevel >= 2);
             }
-          });
+          }
         } catch (e) {
           if (!destroyed) setMapError(String((e && e.message) || e));
         }
