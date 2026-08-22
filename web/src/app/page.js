@@ -860,7 +860,7 @@ export default function FloodMonitor() {
         {/* FOOTER */}
         <footer className="text-center text-slate-400 text-[10px] py-6">
           <p>DATA SOURCE: VRAIN.VN (REALTIME) • VNDMS • OPEN-METEO • BÁO KHÁNH HÒA</p>
-          <p className="mt-1">Dự án hỗ trợ cộng đồng ứng phó thiên tai — 16 tỉnh miền núi phía Bắc & miền Trung.</p>
+          <p className="mt-1">Dự án hỗ trợ cộng đồng ứng phó thiên tai — {provincesList.length > 0 ? provincesList.length : 15} tỉnh miền núi phía Bắc & miền Trung.</p>
         </footer>
 
       </main>

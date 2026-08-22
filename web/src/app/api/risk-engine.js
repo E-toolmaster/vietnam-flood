@@ -77,8 +77,11 @@ export function computeRisk({ rainStations = [], upstreamList = [], forecast = n
     }
   }
 
-  // --- 1. MƯA QUAN TRẮC TẠI TP (từ 00h hôm nay) ---
-  const cityStations = rainStations.filter(s => !s.is_key && s.mm >= 50);
+  // --- 1. MƯA QUAN TRẮC TẠI TP (từ 00h hôm nay) — không chạy cho tỉnh núi
+  //     (miền núi đã có factor lũ quét/sạt lở riêng ở trên, tránh lặp) ---
+  const cityStations = provinceKind === 'mountain'
+    ? []
+    : rainStations.filter(s => !s.is_key && s.mm >= 50);
   if (cityStations.length > 0) {
     const maxCity = Math.max(...cityStations.map(s => s.mm));
     const label = rainLabel(maxCity);
