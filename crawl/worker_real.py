@@ -56,15 +56,15 @@ PROVINCES = {
         ],
     },
     # --- Miền núi phía Bắc: lũ quét, sạt lở ---
-    "lai-chau": {
-        "name": "Lai Châu", "vrain_id": 7, "kind": "mountain",
-        "vndms_places": ["Lai Châu"],
-        "river_stations": [
-            {"label": "Nậm Nhùn", "metric": "Sông Đà (Nậm Nhùn)"},
-            {"label": "Bình Lư", "metric": "Sông Nậm Bô (Bình Lư)"},
-        ],
-        "forecast_points": [{"lat": 22.39, "lon": 103.46, "name": "Lai Châu (dự báo)"}],
-    },
+        "lai-chau": {
+            "name": "Lai Châu", "vrain_id": 7, "kind": "mountain",
+            "vndms_places": ["Lai Châu"],
+            "river_stations": [
+                {"label": "Nà Hừ", "metric": "Sông Nậm Na (Nà Hừ)"},
+                {"label": "Nậm Giàng", "metric": "Sông Đà (Nậm Giàng)"},
+            ],
+            "forecast_points": [{"lat": 22.39, "lon": 103.46, "name": "Lai Châu (dự báo)"}],
+        },
     "dien-bien": {
         "name": "Điện Biên", "vrain_id": 6, "kind": "mountain",
         "vndms_places": ["Điện Biên"],
@@ -77,8 +77,8 @@ PROVINCES = {
         "name": "Sơn La", "vrain_id": 8, "kind": "mountain",
         "vndms_places": ["Sơn La"],
         "river_stations": [
-            {"label": "Quỳnh Nhai", "metric": "Sông Đà (Quỳnh Nhai)"},
             {"label": "Tạ Hộc", "metric": "Sông Nậm Mư (Tạ Hộc)"},
+            {"label": "Tạ Bú", "metric": "Sông Nậm Na (Tạ Bú)"},
         ],
         "forecast_points": [{"lat": 21.55, "lon": 104.05, "name": "Mường La (dự báo)"}],
     },
@@ -644,17 +644,21 @@ def crawl_rivers_vndms():
             for st_cfg in cfg.get("river_stations", []):
                 label = st_cfg["label"]
                 metric_name = st_cfg.get("metric", label)
-                found_ft = None
+                # 1 feature có thể xuất hiện ở nhiều "lv" — duyệt hết các bản
+                # trùng label, ưu tiên bản CÓ số đo (bản đầu có thể chưa cập nhật)
+                level_now = source_time_str = None
+                water_levels = []
+                found = False
                 for ft in by_label.get(label, []):
                     popup = html.unescape(ft.get("properties", {}).get("popupInfo", ""))
-                    if any(place in popup for place in cfg["vndms_places"]):
-                        found_ft = ft
+                    if not any(place in popup for place in cfg["vndms_places"]):
+                        continue
+                    lv_now, lv_time, wl = parse_vndms_station(ft)
+                    if lv_now is not None:
+                        level_now, source_time_str, water_levels = lv_now, lv_time, wl
+                        found = True
                         break
-                if found_ft is None:
-                    continue
-
-                level_now, source_time_str, water_levels = parse_vndms_station(found_ft)
-                if level_now is None:
+                if not found or level_now is None:
                     continue
 
                 result_obj = {"station_info": {}, "water_levels": water_levels}
