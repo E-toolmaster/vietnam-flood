@@ -186,20 +186,28 @@ function RiskMap({ center, province, provinceName, river, riverDanger, reservoir
             if (riverGeo && riverGeo.features && riverGeo.features.length > 0) {
               map.addSource('rivers', { type: 'geojson', data: riverGeo });
               map.addLayer({
+                id: 'river-glow', type: 'line', source: 'rivers',
+                paint: {
+                  'line-color': '#0284c7',
+                  'line-width': ['interpolate', ['linear'], ['zoom'], 7, 5, 10, 8, 14, 16],
+                  'line-opacity': 0.28,
+                  'line-blur': 3,
+                },
+              });
+              map.addLayer({
                 id: 'river-base', type: 'line', source: 'rivers',
                 paint: {
-                  'line-color': '#1e40af',
-                  'line-width': ['interpolate', ['linear'], ['zoom'], 7, 1.4, 11, 4.5, 14, 9],
-                  'line-opacity': 0.85,
+                  'line-color': '#38bdf8',
+                  'line-width': ['interpolate', ['linear'], ['zoom'], 7, 2.2, 10, 3.6, 14, 8],
+                  'line-opacity': 0.9,
                 },
               });
               map.addLayer({
                 id: 'river-flow', type: 'line', source: 'rivers',
                 paint: {
-                  'line-color': '#22d3ee',
-                  'line-width': ['interpolate', ['linear'], ['zoom'], 7, 0.9, 11, 2.4, 14, 5],
-                  'line-opacity': 0.95,
-                  'line-blur': 0.6,
+                  'line-color': '#e0f2fe',
+                  'line-width': ['interpolate', ['linear'], ['zoom'], 7, 1.4, 10, 2.2, 14, 4.5],
+                  'line-opacity': 1,
                 },
               });
               // "ants-marching": dịch dasharray theo vòng lặp -> nước chảy
