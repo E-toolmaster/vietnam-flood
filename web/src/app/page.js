@@ -86,6 +86,7 @@ function RiskMap({ center, province, provinceName, river, riverDanger, reservoir
   useEffect(() => {
     let map = null;
     let destroyed = false;
+    let blinkTimer = null;
     const cleanups = [];
 
     import('maplibre-gl')
@@ -94,45 +95,48 @@ function RiskMap({ center, province, provinceName, river, riverDanger, reservoir
         const maplibregl = mod.default ?? mod;
         if (destroyed || !containerRef.current) return;
         try {
-          map = new maplibregl.Map({
+      map = new maplibregl.Map({
         container: containerRef.current,
+        // Nền 2D dạng lớp (không vệ tinh): Carto Voyager — có chi tiết tới
+        // đường/phường/xã khi zoom, màu sáng dễ nhìn cảnh báo
         style: {
           version: 8,
           sources: {
-            sat: {
+            carto: {
               type: 'raster',
-              tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+              tiles: ['https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+                      'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+                      'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png'],
               tileSize: 256,
-              attribution: 'Ảnh nền: Esri, Maxar',
-            },
-            labels: {
-              type: 'raster',
-              tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],
-              tileSize: 256,
+              attribution: '© OpenStreetMap, © CARTO',
             },
           },
           layers: [
-            { id: 'sat', type: 'raster', source: 'sat' },
-            { id: 'labels', type: 'raster', source: 'labels', paint: { 'raster-opacity': 0.85 } },
+            { id: 'carto', type: 'raster', source: 'carto' },
           ],
         },
         center: [center.lon, center.lat],
-        zoom: 7.6,
-        pitch: 52,
-        bearing: -18,
+        zoom: 8.4,
+        pitch: 0,
+        bearing: 0,
       });
       map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
 
-      const markerEl = (color, label, pulse, big) => {
+      const markerEl = (color, label, blink, big) => {
         const el = document.createElement('div');
         el.style.cssText = 'display:flex;align-items:center;gap:5px;cursor:pointer;';
         const dot = document.createElement('div');
-        dot.style.cssText = `width:${big ? 16 : 11}px;height:${big ? 16 : 11}px;border-radius:9999px;background:${color};border:2px solid rgba(255,255,255,.92);box-shadow:0 0 10px ${color};`;
-        if (pulse) dot.classList.add('map-pulse');
+        dot.style.cssText = `width:${big ? 15 : 11}px;height:${big ? 15 : 11}px;border-radius:9999px;background:${color};border:2px solid rgba(255,255,255,.95);box-shadow:0 0 8px ${color};`;
+        if (blink) {
+          dot.classList.add('map-blink');
+          dot.style.background = '#dc2626';
+          dot.style.boxShadow = '0 0 12px #dc2626';
+        }
         el.appendChild(dot);
         if (label) {
           const tag = document.createElement('span');
-          tag.style.cssText = 'background:rgba(2,6,23,.78);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px;white-space:nowrap;';
+          tag.style.cssText = 'background:rgba(220,38,38,.85);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px;white-space:nowrap;';
+          if (!blink) tag.style.background = 'rgba(2,6,23,.78)';
           tag.textContent = label;
           el.appendChild(tag);
         }
@@ -149,7 +153,8 @@ function RiskMap({ center, province, provinceName, river, riverDanger, reservoir
       };
 
       map.on('load', () => {
-        // Vùng cảnh báo ngập (phản ánh rủi ro hiện tại, không phải ranh ngập thật)
+        let blinkPhase = false;
+        // Vùng cảnh báo ngập — chấm/vòng ĐỎ NHẤP NHÁY theo nhịp (không phải ranh ngập thật)
         if (riskLevel >= 2 && river?.lat != null) {
           map.addSource('floodzone', {
             type: 'geojson',
@@ -159,10 +164,17 @@ function RiskMap({ center, province, provinceName, river, riverDanger, reservoir
             id: 'floodring', type: 'circle', source: 'floodzone',
             paint: {
               'circle-radius': riskLevel >= 3 ? 26 : 15,
-              'circle-color': '#ef4444', 'circle-opacity': 0.16,
-              'circle-stroke-color': '#ef4444', 'circle-stroke-width': 1.3, 'circle-stroke-opacity': 0.75,
+              'circle-color': '#ef4444', 'circle-opacity': 0.2,
+              'circle-stroke-color': '#dc2626', 'circle-stroke-width': 1.6, 'circle-stroke-opacity': 0.85,
             },
           });
+          blinkTimer = setInterval(() => {
+            blinkPhase = !blinkPhase;
+            if (map && map.getLayer('floodring')) {
+              map.setPaintProperty('floodring', 'circle-opacity', blinkPhase ? 0.32 : 0.07);
+              map.setPaintProperty('floodring', 'circle-stroke-opacity', blinkPhase ? 0.95 : 0.3);
+            }
+          }, 600);
         }
 
         // Trạm sông
@@ -204,6 +216,7 @@ function RiskMap({ center, province, provinceName, river, riverDanger, reservoir
 
     return () => {
       destroyed = true;
+      if (blinkTimer) clearInterval(blinkTimer);
       cleanups.forEach(fn => fn());
       if (map) map.remove();
     };
@@ -224,7 +237,7 @@ function RiskMap({ center, province, provinceName, river, riverDanger, reservoir
       )}
       {!mapError && (
         <div className="absolute bottom-2 left-2 z-10 bg-slate-900/80 text-white text-[10px] px-2.5 py-1.5 rounded-lg flex gap-3">
-          <span>🔴 cảnh báo</span><span>🟠 dâng/gần đầy</span><span>🔵 ổn định</span>
+          <span className="text-red-400 font-bold">🔴 nhấp nháy = nguy cơ ngập/lũ</span><span>🟠 dâng / gần đầy</span><span>🔵 ổn định</span>
         </div>
       )}
     </div>
@@ -749,13 +762,13 @@ export default function FloodMonitor() {
           </div>
         </div>
 
-        {/* 2.4. BẢN ĐỒ 2.5D — điểm quan trắc & vùng cảnh báo */}
+        {/* 2.4. BẢN ĐỒ CẢNH BÁO — điểm quan trắc & vùng nguy cơ */}
         <section className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50 flex-wrap gap-1">
             <h2 className="font-bold text-slate-800 flex items-center gap-2 text-sm uppercase tracking-wide">
-              <MapPin className="w-4 h-4 text-red-500" /> Bản đồ 2.5D — điểm quan trắc &amp; vùng cảnh báo
+              <MapPin className="w-4 h-4 text-red-500" /> Bản đồ cảnh báo — điểm quan trắc &amp; vùng nguy cơ
             </h2>
-            <span className="text-[10px] text-slate-400">kéo để xoay • Ctrl+kéo để nghiêng • bấm chấm xem chi tiết</span>
+            <span className="text-[10px] text-slate-400">zoom vào để xem tới phường/xã • bấm chấm để xem chi tiết</span>
           </div>
           <div className="p-2">
             <RiskMap
