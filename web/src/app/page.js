@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   BarChart, Bar, Tooltip, ResponsiveContainer,
   LineChart, Line, XAxis, YAxis, CartesianGrid
@@ -182,7 +182,8 @@ export default function FloodMonitor() {
   const riverHistory = monitorData?.river?.history || [];
 
   // Dự phóng xu hướng 6h tới từ rate dâng (đường đứt, ghi rõ là ước tính)
-  const riverChartData = useMemo(() => {
+  // (IIFE thường, không dùng useMemo — hook không được nằm sau early-return loading)
+  const riverChartData = (() => {
     const pts = (monitorData?.river?.history48h || monitorData?.river?.history || []);
     if (pts.length < 2) return { data: pts.map(p => ({ ...p })), hasProj: false };
     const last = pts[pts.length - 1];
@@ -207,7 +208,7 @@ export default function FloodMonitor() {
       out.push({ time: dLabel, proj: +(last.value + rate * i).toFixed(2) });
     }
     return { data: out, hasProj: true, rate };
-  }, [monitorData]);
+  })();
 
   const riskData = monitorData?.risk || {};
   const risks = riskData.factors || [];
