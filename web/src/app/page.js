@@ -379,28 +379,36 @@ export default function FloodMonitor() {
   }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
+    // Đổi tỉnh -> XÓA dữ liệu tỉnh cũ ngay để không bao giờ trộn 2 tỉnh
+    // (fetch lỗi sẽ hiện lỗi thay vì giữ data cũ gây hiểu lầm)
+    setMonitorData(null);
+    setAlerts([]);
+    let cancelled = false;
+    const fetchData = async (retry = true) => {
       try {
         const t = new Date().getTime();
         const res = await fetch(`/api/alerts?province=${province}&t=${t}`, { cache: 'no-store' });
         if (!res.ok) throw new Error('Network error');
         const json = await res.json();
+        if (cancelled) return;
         setMonitorData(json.metrics);
         setAlerts(json.data || []);
         setLoading(false);
         setCurrentTime(new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }));
       } catch (error) {
         console.error('Error fetching flood data:', error);
+        if (cancelled) return;
+        if (retry) { setTimeout(() => fetchData(false), 2500); return; }
         setLoading(false);
       }
     };
     setLoading(true);
     fetchData();
-    const interval = setInterval(fetchData, 900000);
+    const interval = setInterval(() => fetchData(), 900000);
     const timer = setInterval(() => {
       setCurrentTime(new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }));
     }, 60000);
-    return () => { clearInterval(interval); clearInterval(timer); };
+    return () => { cancelled = true; clearInterval(interval); clearInterval(timer); };
   }, [province]);
 
   const switchProvince = (code) => {
