@@ -5,9 +5,9 @@
 //   rất to >100, cực to >250 (kttvtrungbo.vn / baochinhphu.vn).
 // - Cấp độ rủi ro thiên tai do mưa lớn: Điều 44 QĐ 18/2021/QĐ-TTg
 //   (mm/24h): 100–200 = cấp 1, 200–300 = cấp 2, >300 = cấp 3.
-// - Ngưỡng "cảnh báo địa phương" Nha Trang: mưa TP ≥50mm/24h hoặc mưa đầu nguồn
-//   ≥50mm/24h đã có nguy cơ ngập đô thị / lũ hạ du (kinh nghiệm địa phương,
-//   NHẸ HƠN ngưỡng quốc gia vì địa hình trũng ven sông Cái).
+// - Ngưỡng "cảnh báo địa phương": mưa trong tỉnh ≥50mm/24h hoặc mưa đầu nguồn
+//   ≥50mm/24h đã có nguy cơ ngập đô thị / lũ hạ du (kinh nghiệm vùng trũng ven sông,
+//   NHẸ HƠN ngưỡng quốc gia). Không gắn tên tỉnh — dùng chung mọi tỉnh.
 
 const REF_KTTV = 'Phân loại mưa KTTV (mm/24h)';
 const REF_QD18 = 'Điều 44 QĐ 18/2021/QĐ-TTg';
@@ -110,11 +110,11 @@ export function computeRisk({ rainStations = [], upstreamList = [], forecast = n
     factors.push({
       type: 'upstream_rain', source: 'observed', level,
       title: maxUp >= 100 ? `Mưa rất to đầu nguồn (${st?.name}: ${maxUp.toFixed(0)}mm)` : `Mưa lớn đầu nguồn (${st?.name}: ${maxUp.toFixed(0)}mm)`,
-      desc: `Mưa thượng nguồn lưu vực sông Cái từ 00h. Tích lũy 3 ngày tại trạm nặng nhất ~${max3day.toFixed(0)}mm. `
+      desc: `Mưa thượng nguồn lưu vực sông chính của tỉnh. Tích lũy 3 ngày tại trạm nặng nhất ~${max3day.toFixed(0)}mm. `
           + (maxUp >= 100
               ? `Vượt ngưỡng ${REF_QD18} cấp ${national || 1} — nước về hạ du gây ngập vùng ven sông sau vài giờ.`
-              : `Theo ${REF_LOCAL}, mưa đầu nguồn ≥50mm/24h cần theo dõi mực nước sông Cái chặt (lũ về hạ du trễ vài giờ).`),
-      locations: 'Tây Nha Trang, H. Diên Khánh, H. Khánh Vĩnh',
+              : `Theo ${REF_LOCAL}, mưa đầu nguồn ≥50mm/24h cần theo dõi mực nước sông chặt (lũ về hạ du trễ vài giờ).`),
+      locations: 'Vùng ven sông, hạ du thượng nguồn',
       thresholds_ref: `${REF_KTTV}; ${REF_QD18}; ${REF_LOCAL} ≥50mm/24h`,
     });
   }
@@ -174,7 +174,7 @@ export function computeRisk({ rainStations = [], upstreamList = [], forecast = n
         type: 'river_rising', source: 'observed', level: riverTrend.risePerHour >= 0.15 ? 3 : 2,
         title: `Sông Cái đang dâng nhanh (+${riverTrend.risePerHour.toFixed(2)}m/giờ)`,
         desc: `Trong ${riverTrend.hoursSpan.toFixed(0)} giờ qua mực nước dâng liên tục kết hợp mưa đầu nguồn ≥25mm — nguy cơ lũ về hạ du trong vài giờ tới (ước tính heuristics, mang tính tham khảo).`,
-        locations: 'Tây Nha Trang, H. Diên Khánh',
+        locations: 'Vùng ven sông, hạ du',
         thresholds_ref: 'Xu hướng quan trắc (≥0.05m/h + mưa đầu nguồn)',
       });
     }
@@ -194,8 +194,8 @@ export function computeRisk({ rainStations = [], upstreamList = [], forecast = n
       factors.push({
         type: 'reservoir_discharge', source: 'observed', level: 3,
         title: `${r.name} xả lũ lớn (${r.q_out} m³/s)`,
-        desc: `Hồ đang xả trên 50 m³/s — nguy cơ ngập vùng trũng ven sông Cái hạ du.`,
-        locations: 'H. Diên Khánh, Tây Nha Trang',
+        desc: `Hồ đang xả trên 50 m³/s — nguy cơ ngập vùng trũng ven sông ngay hạ du hồ.`,
+        locations: 'Vùng trũng hạ du hồ',
         thresholds_ref: 'Ngưỡng theo dõi vận hành hồ chứa (>50 m³/s)',
       });
     } else if (r.percentFull >= 90) {
@@ -203,7 +203,7 @@ export function computeRisk({ rainStations = [], upstreamList = [], forecast = n
         type: 'reservoir_full', source: 'observed', level: 2,
         title: `${r.name} gần đầy (${r.percentFull}%)`,
         desc: `Hồ đạt ${r.percentFull}% dung tích — nếu mưa tiếp diễn hồ có thể phải xả lũ bổ sung, ảnh hưởng hạ du.`,
-        locations: 'Ven sông Cái',
+        locations: 'Vùng hạ du hồ',
         thresholds_ref: 'Mực 90% dung tích',
       });
     }
