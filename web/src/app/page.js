@@ -90,7 +90,8 @@ function RiskMap({ center, province, provinceName, river, riverDanger, reservoir
 
     import('maplibre-gl')
       .then((mod) => {
-        const maplibregl = mod.default;
+        // interop: bản build này export named (mod.Map) chứ không phải mod.default
+        const maplibregl = mod.default ?? mod;
         if (destroyed || !containerRef.current) return;
         try {
           map = new maplibregl.Map({
