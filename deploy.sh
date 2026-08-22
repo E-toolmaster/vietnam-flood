@@ -32,13 +32,17 @@ npm run build
 # 4. PM2 Management
 echo "🔄 Restarting PM2 processes..."
 
-# Restart Crawler
+# Restart Crawler (đường dẫn tuyệt đối — CWD lúc này là web/ nên path tương đối sẽ không tìm thấy script)
 pm2 delete flood-crawler 2>/dev/null || true
-pm2 start worker_real.py --name "flood-crawler" --interpreter ./venv/bin/python
+pm2 start "$CRAWL_DIR/worker_real.py" --name "flood-crawler" --interpreter "$CRAWL_DIR/venv/bin/python"
 
 # Restart Web with Absolute DB Path
+# Port 3003 khớp với nginx: /etc/nginx/sites-enabled/khanhhoa-flood (proxy_pass localhost:3003).
+# Port 3000 đã bị task-api (ohstudio-manager) chiếm — dùng 3000 sẽ gây EADDRINUSE crash-loop.
 pm2 delete flood-web 2>/dev/null || true
-DATABASE_URL=$DB_PATH pm2 start npm --name "flood-web" -- start -- -p 3000
+cd $WEB_DIR
+DATABASE_URL=$DB_PATH pm2 start npm --name "flood-web" -- start -- -p 3003
 
+pm2 save
 echo "✅ Deployment Finished!"
 pm2 list
