@@ -2,6 +2,7 @@ import requests
 import sqlite3
 import time
 import re
+import unicodedata
 from datetime import datetime, timedelta
 import pytz
 from bs4 import BeautifulSoup
@@ -44,20 +45,33 @@ COORDS = {
     }
 }
 
-# Backup Open-Meteo (giữ lại để tính mưa tổng 3 ngày nếu cần)
-RAIN_POINTS = [
-    {"lat": 12.26, "lon": 108.90, "name": "Khánh Vĩnh (Cũ)"},
-    {"lat": 12.422, "lon": 108.841, "name": "Khánh Hiệp (Tâm mưa)"},
-    {"lat": 12.208, "lon": 108.769, "name": "Sơn Thái (Tâm mưa)"},
+# Điểm dự báo Open-Meteo (thượng nguồn + TP). CHỈ DÙNG CHO DỰ BÁO, không phải số đo trạm.
+FORECAST_POINTS = [
+    {"lat": 12.26, "lon": 108.90, "name": "Khánh Vĩnh (dự báo)"},
+    {"lat": 12.422, "lon": 108.841, "name": "Khánh Hiệp (dự báo)"},
+    {"lat": 12.208, "lon": 108.769, "name": "Sơn Thái (dự báo)"},
+    {"lat": 12.245, "lon": 109.15, "name": "Nha Trang (dự báo)"},
 ]
 
-# === TRẠM TRỌNG YẾU (KEY STATIONS) ===
-# Code sẽ tìm Max trong các trạm này để hiển thị "Mưa Thượng Nguồn"
-KEY_STATIONS = [
+# === TRẠM THƯỢNG NGUỒN SÔNG CÁI (lưu vực Khánh Vĩnh) ===
+# Chỉ những trạm này mới được tính là "mưa đầu nguồn" (is_key=1).
+# Các trạm hạ du/TP (Đồng Trăng, Suối Tiên, Diên Khánh...) KHÔNG thuộc danh sách này.
+UPSTREAM_KEYS = [
     "Khánh Vĩnh", "Khánh Nam", "Khánh Đông", "Sông Cầu", "Giang Ly",
     "Khánh Hiệp", "Khánh Thượng", "Khánh Bình", "Liên Sang",
-    "Hồ Suối Dầu", "Hồ Am Chúa", "Diên Khánh", "Suối Tiên", "Đồng Trăng"
 ]
+
+def normalize_station_key(name):
+    """Tạo khóa trạm ổn định từ tên Vrain (bỏ hậu tố 'Lưu vực...', '(xã ...)', dấu, hoa thường).
+    Tránh việc định dạng tên đổi giữa các ngày làm gãy tích lũy nhiều ngày."""
+    s = (name or "").strip()
+    s = re.split(r",", s)[0].strip()
+    s = re.sub(r"\s*\(.*?\)\s*$", "", s).strip()
+    s = unicodedata.normalize("NFD", s)
+    s = "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
+    s = s.replace("đ", "d").replace("Đ", "d").lower()
+    s = re.sub(r"\s+", " ", s)
+    return s
 
 # === HỒ ẢNH HƯỞNG SÔNG CÁI (THEO DÕI VẬN HÀNH) ===
 TARGET_RESERVOIRS = [
@@ -146,48 +160,65 @@ def save_alert(title, link, source):
 
 # ==== CRAWL FUNCTIONS ====
 
-def crawl_open_meteo():
-    print(f"\n🌐 [1/5] Open-Meteo Backup (mưa tổng 3 ngày)...")
-    max_rain_current, total_3day_max = -1, -1
-    max_rain_3day, max_point_name = [], ""
+def crawl_open_meteo_forecast():
+    """Dự báo lượng mưa 24h tới (hourly) cho các điểm thượng nguồn + TP.
+    Ghi vào metric riêng 'Du_Bao_Mua_24h' — tách bạch với số đo trạm Vrain."""
+    print(f"\n🌐 [1/5] Open-Meteo Dự báo mưa 24h tới...")
     try:
-        for point in RAIN_POINTS:
+        now = datetime.now(TZ_VN)
+        now_iso = now.strftime("%Y-%m-%dT%H:00")
+        end_iso = (now + timedelta(hours=24)).strftime("%Y-%m-%dT%H:00")
+
+        points = []
+        for point in FORECAST_POINTS:
             url = (
                 "https://api.open-meteo.com/v1/forecast"
                 f"?latitude={point['lat']}&longitude={point['lon']}"
-                "&current=rain&daily=precipitation_sum&timezone=Asia%2FBangkok"
-                "&forecast_days=1&past_days=2"
+                "&hourly=precipitation&forecast_days=2&timezone=Asia%2FBangkok"
             )
             try:
-                r = requests.get(url, timeout=5).json()
-                curr = r.get("current", {}).get("rain", 0)
-                daily = r.get("daily", {}).get("precipitation_sum", [])
-                
-                if len(daily) < 3:
-                    daily = [0] * (3 - len(daily)) + daily
-                daily_3 = daily[-3:]
-
-                if sum(daily_3) > total_3day_max:
-                    total_3day_max = sum(daily_3)
-                    max_rain_current = curr
-                    max_rain_3day = daily_3
-                    max_point_name = point["name"]
-            except:
+                r = requests.get(url, timeout=8).json()
+                times = r.get("hourly", {}).get("time", [])
+                vals = r.get("hourly", {}).get("precipitation", [])
+                next24 = sum(v for t, v in zip(times, vals)
+                             if v is not None and now_iso < t <= end_iso)
+                points.append({"name": point["name"], "next24_mm": round(next24, 1)})
+            except Exception:
                 continue
 
-        if max_rain_3day:
-            desc = ",".join(f"{v:.1f}" for v in max_rain_3day)
-            
-            # CHỈ UPDATE VALUE, KHÔNG UPDATE updated_at ĐỂ TRÁNH HIỂU LẦM
-            # (Trừ khi chưa từng có dữ liệu)
-            db_execute(
-                "UPDATE metrics SET value = ?, description = ? WHERE name = ?",
-                (max_rain_current, desc, "Mưa Thượng Nguồn (Max)"),
+        if not points:
+            print("⚠️ Open-Meteo: không lấy được dự báo điểm nào.")
+            return
+
+        best = max(points, key=lambda p: p["next24_mm"])
+        payload = {
+            "source": "open-meteo",
+            "fetched_at": now.strftime("%H:%M %d/%m"),
+            "points": points,
+            "max_mm": best["next24_mm"],
+            "point_name": best["name"],
+        }
+        updated_at = now.strftime("%H:%M %d/%m")
+        db_execute(
+            """UPDATE metrics SET value=?, updated_at=?, history_json=?
+               WHERE name='Du_Bao_Mua_24h'""",
+            (best["next24_mm"], updated_at, json.dumps(payload, ensure_ascii=False)),
+        )
+        # INSERT nếu metric chưa tồn tại
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        if not c.execute("SELECT 1 FROM metrics WHERE name='Du_Bao_Mua_24h'").fetchone():
+            c.execute(
+                """INSERT INTO metrics (name, type, value, updated_at, history_json, description)
+                   VALUES ('Du_Bao_Mua_24h', 'forecast', ?, ?, ?, 'Dự báo mô hình Open-Meteo')""",
+                (best["next24_mm"], updated_at, json.dumps(payload, ensure_ascii=False)),
             )
-            print(f" ✅ Open-Meteo: {max_rain_current:.1f}mm hiện tại, 3 ngày {total_3day_max:.1f}mm ({desc})")
+            conn.commit()
+        conn.close()
+        print(f" ✅ Dự báo 24h: max {best['next24_mm']:.1f}mm tại {best['name']}")
 
     except Exception as e:
-        print(f"❌ OpenMeteo: {e}")
+        print(f"❌ OpenMeteo Forecast: {e}")
 
 def crawl_vrain():
     print("\n🌧 [2/5] Quét Vrain...")
@@ -228,19 +259,34 @@ def crawl_vrain():
                 mm REAL,
                 level TEXT,
                 is_key INTEGER DEFAULT 0,
+                station_key TEXT,
                 UNIQUE(date, station_name)
             )
         """)
+
+        # Migration: thêm + backfill station_key, gộp các biến thể tên trạm trùng (date, key)
+        cols = [i[1] for i in c.execute("PRAGMA table_info(rain_stations)").fetchall()]
+        if "station_key" not in cols:
+            c.execute("ALTER TABLE rain_stations ADD COLUMN station_key TEXT")
+        for row in c.execute("SELECT id, station_name FROM rain_stations WHERE station_key IS NULL").fetchall():
+            c.execute("UPDATE rain_stations SET station_key = ? WHERE id = ?",
+                      (normalize_station_key(row[1]), row[0]))
+        if not c.execute("SELECT 1 FROM sqlite_master WHERE type='index' AND name='idx_rain_date_key'").fetchone():
+            # Giữ row mới nhất cho mỗi (date, station_key) trước khi tạo unique index
+            c.execute("""DELETE FROM rain_stations WHERE id NOT IN
+                         (SELECT MAX(id) FROM rain_stations GROUP BY date, station_key)""")
+            c.execute("CREATE UNIQUE INDEX idx_rain_date_key ON rain_stations(date, station_key)")
+        conn.commit()
 
         cnt = 0
         for st in stations:
             try:
                 r1 = st.select_one(".station-row-1")
                 if not r1: continue
-                
+
                 spans = r1.find_all("span", recursive=False)
                 if len(spans) < 2: continue
-                
+
                 name = spans[0].get_text(strip=True)
                 mm_str = spans[-1].get_text(strip=True).replace("mm", "").replace(",", ".").strip()
                 mm = float(mm_str) if mm_str else 0.0
@@ -253,16 +299,16 @@ def crawl_vrain():
                         loc = childs[0].get_text(strip=True)
                         if len(childs) > 1:
                             lvl = childs[-1].get_text(strip=True)
-                
-                # Check Key Stations
-                is_key = 1 if any(k.lower() in name.lower() for k in KEY_STATIONS) else 0
+
+                # Chỉ trạm lưu vực Khánh Vĩnh mới là "thượng nguồn"
+                is_key = 1 if any(k.lower() in name.lower() for k in UPSTREAM_KEYS) else 0
 
                 c.execute("""
                     INSERT OR REPLACE INTO rain_stations
-                    (date, station_name, basin, location, mm, level, is_key)
-                    VALUES (?,?,?,?,?,?,?)
-                """, (today, name, name, loc, mm, lvl, is_key))
-                
+                    (date, station_key, station_name, basin, location, mm, level, is_key)
+                    VALUES (?,?,?,?,?,?,?,?)
+                """, (today, normalize_station_key(name), name, name, loc, mm, lvl, is_key))
+
                 cnt += 1
             except:
                 continue
@@ -339,6 +385,51 @@ def override_rain_with_vrain(is_success):
         conn.close()
     except Exception as e:
         print(f"❌ Calc Rain: {e}")
+
+def parse_source_time_to_ts(source_time_str):
+    """'07:00 22/08' -> 'YYYY-08-22 07:00' (xử lý lấn năm: tháng trong tương lai xa = năm trước)."""
+    m = re.match(r"(\d{1,2}):(\d{2})\s+(\d{1,2})/(\d{1,2})$", (source_time_str or "").strip())
+    if not m:
+        return None
+    now = datetime.now(TZ_VN)
+    hh, mi, day, month = int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4))
+    try:
+        ts = datetime(now.year, month, day, hh, mi)
+    except ValueError:
+        return None
+    if (ts - now.replace(tzinfo=None)).total_seconds() > 30 * 86400:
+        ts = datetime(now.year - 1, month, day, hh, mi)
+    return ts.strftime("%Y-%m-%d %H:%M")
+
+def save_river_history(level_now, source_time_str, result_obj):
+    """Lưu chuỗi mực nước tự tích lũy (không phụ thuộc parser chart VNDMS)."""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("CREATE TABLE IF NOT EXISTS river_history (ts TEXT PRIMARY KEY, level REAL)")
+
+        ts = parse_source_time_to_ts(source_time_str) or datetime.now(TZ_VN).strftime("%Y-%m-%d %H:%M")
+        c.execute("INSERT OR REPLACE INTO river_history (ts, level) VALUES (?, ?)", (ts, level_now))
+
+        # Backfill từ chart VNDMS nếu parse được (label dạng '7h 21/8' / '01h - 07/12')
+        for item in result_obj.get("water_levels", []):
+            m = re.search(r"(\d{1,2})h\D+(\d{1,2})/(\d{1,2})", item.get("time", ""))
+            if not m:
+                continue
+            now = datetime.now(TZ_VN)
+            try:
+                dt = datetime(now.year, int(m.group(3)), int(m.group(2)), int(m.group(1)))
+            except ValueError:
+                continue
+            if (dt - now.replace(tzinfo=None)).total_seconds() > 30 * 86400:
+                dt = datetime(now.year - 1, int(m.group(3)), int(m.group(2)), int(m.group(1)))
+            c.execute("INSERT OR IGNORE INTO river_history (ts, level) VALUES (?, ?)",
+                      (dt.strftime("%Y-%m-%d %H:%M"), item.get("value")))
+
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"⚠️ river_history: {e}")
 
 def crawl_song_cai_from_vndms():
     print("\n🌊 [3/5] Mực nước Sông Cái (Time nguồn chính xác)...")
@@ -457,6 +548,7 @@ def crawl_song_cai_from_vndms():
         )
         conn.commit()
         conn.close()
+        save_river_history(level_now, source_time_str, result_obj)
 
     except Exception as e:
         print(f"❌ Lỗi Sông Cái: {e}")
@@ -589,13 +681,15 @@ def crawl_news():
         pass
 
 
+# (tên hiển thị, các pattern LIKE để tìm trạm trong DB)
 UPSTREAM_TARGETS = [
-    "Khánh Đông",   # Khánh Đông xã Bắc Khánh Vĩnh
-    "Khánh Nam",    # Khánh Nam xã Tây Khánh Vĩnh
-    "Sông Cầu",     # Sông Cầu xã Khánh Vĩnh
-    "Hồ Am Chúa",   # Hồ Am Chúa, Lưu vực xã Diên Điền
-    "Hồ Suối Dầu"   # Hồ Suối Dầu, lưu vực Đỉnh Hòn Bà (Hoặc Đỉnh Hòn Bà)
+    ("Khánh Đông", ["%Khánh Đông%"]),   # xã Bắc Khánh Vĩnh
+    ("Khánh Nam", ["%Khánh Nam%"]),     # xã Tây Khánh Vĩnh
+    ("Sông Cầu", ["%Sông Cầu%"]),       # xã Khánh Vĩnh
+    ("Hồ Am Chúa", ["%Am Chúa%"]),      # Diên Điền
+    ("Hồ Suối Dầu", ["%Suối Dầu%", "%Hòn Bà%"]),  # lưu vực Hòn Bà
 ]
+
 def calculate_upstream_list(is_success):
     print("⏱ Tổng hợp dữ liệu Thượng Nguồn (Lấy cả Location & Level)...")
     try:
@@ -605,84 +699,70 @@ def calculate_upstream_list(is_success):
         today = datetime.now(TZ_VN).date()
         dates = [(today - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(2, -1, -1)]
         placeholders = ",".join("?" for _ in dates)
+        as_of = datetime.now(TZ_VN).strftime("%H:%M")
 
         results = []
-        for target in UPSTREAM_TARGETS:
-            # Lấy thêm cột location và level
-            if target == "Hồ Suối Dầu":
-                query = f"""
-                    SELECT date, mm, station_name, location, level FROM rain_stations 
-                    WHERE (station_name LIKE '%Suối Dầu%' OR station_name LIKE '%Hòn Bà%') 
-                    AND date IN ({placeholders}) 
-                    ORDER BY date
-                """
-                rows = cur.execute(query, (*dates,)).fetchall()
-            else:
-                query = f"""
-                    SELECT date, mm, station_name, location, level FROM rain_stations 
-                    WHERE station_name LIKE ? 
-                    AND date IN ({placeholders}) 
-                    ORDER BY date
-                """
-                rows = cur.execute(query, (f"%{target}%", *dates)).fetchall()
-            
+        for target, patterns in UPSTREAM_TARGETS:
+            where = " OR ".join("station_name LIKE ?" for _ in patterns)
+            rows = cur.execute(
+                f"""
+                SELECT date, mm, station_key, station_name, location, level FROM rain_stations
+                WHERE ({where}) AND date IN ({placeholders})
+                ORDER BY date
+                """,
+                (*patterns, *dates),
+            ).fetchall()
+
             if not rows:
                 continue
 
-            # Group để tìm trạm đại diện tốt nhất
-            stations_found = {}
+            # Gom theo station_key (chống lỗi trạm đổi định dạng tên giữa các ngày)
+            by_key = {}
             for r in rows:
-                s_name = r["station_name"]
-                if s_name not in stations_found: stations_found[s_name] = {}
-                # Lưu cả object row để lấy level/location sau này
-                stations_found[s_name][r["date"]] = r
-            
-            # Chọn trạm có mưa hôm nay lớn nhất
-            best_station_rows = None
-            best_val = -1
-            
-            for s_name, data_map in stations_found.items():
-                # Lấy row của ngày hôm nay (dates[2])
-                row_today = data_map.get(dates[2])
+                by_key.setdefault(r["station_key"], {})[r["date"]] = r
+
+            # Chọn station_key có mưa hôm nay lớn nhất
+            best_map, best_val = None, -1
+            for _, day_rows in by_key.items():
+                row_today = day_rows.get(dates[2])
                 val_today = row_today["mm"] if row_today else 0.0
-                
                 if val_today > best_val:
                     best_val = val_today
-                    best_station_rows = data_map
+                    best_map = day_rows
 
-            # Tính toán
-            vals = []
-            location_str = ""
-            level_str = "Tạnh ráo" # Mặc định
-            
-            # Duyệt lại 3 ngày để lấy mưa, đồng thời lấy info của ngày hôm nay
+            vals, days_present = [], 0
+            location_str, level_str, disp_name = "", "", target
             for d in dates:
-                row = best_station_rows.get(d)
+                row = best_map.get(d)
                 if row:
                     vals.append(row["mm"])
-                    if d == dates[2]: # Nếu là hôm nay thì lấy info
-                        location_str = row["location"]
-                        if row["level"]: level_str = row["level"] # Lấy level từ Vrain (VD: Mưa nhỏ, Mưa vừa)
+                    days_present += 1
+                    if d == dates[2]:
+                        location_str = row["location"] or ""
+                        level_str = row["level"] or ""
+                        disp_name = (row["station_name"].split(",")[0].strip()) or target
                 else:
                     vals.append(0.0)
 
             results.append({
-                "name": target,
-                "location": location_str, # VD: xã Diên Điền
-                "level": level_str,       # VD: Mưa nhỏ (Lấy từ DB)
-                "today": vals[2],
-                "total_3day": sum(vals),
-                "has_enough_data": (vals[0] > 0 or vals[1] > 0)
+                "name": disp_name,
+                "location": location_str,
+                "level": level_str,
+                "today": vals[2],              # từ 00h đến giờ crawl (chưa hết ngày)
+                "total_3day": sum(vals),       # 2 ngày hoàn chỉnh + hôm nay đến as_of
+                "days_present": days_present,  # số ngày thực sự có dữ liệu (0mm vẫn là dữ liệu)
+                "has_enough_data": days_present >= 2,
+                "as_of": as_of,
             })
 
         json_data = json.dumps(results, ensure_ascii=False)
         updated_at = datetime.now(TZ_VN).strftime("%H:%M %d/%m")
-        
+
         c = conn.cursor()
         c.execute("UPDATE metrics SET history_json = ?, updated_at = ? WHERE name = 'Du_Lieu_Thuong_Nguon'", (json_data, updated_at))
         if c.rowcount == 0:
             c.execute("INSERT INTO metrics (name, value, updated_at, history_json, description) VALUES ('Du_Lieu_Thuong_Nguon', 0, ?, ?, '')", (updated_at, json_data))
-            
+
         conn.commit()
         conn.close()
         print(f"✅ Đã tổng hợp mưa thượng nguồn: {len(results)} trạm.")
@@ -695,7 +775,7 @@ if __name__ == "__main__":
     while True:
         print(f"\n⏰ {datetime.now(TZ_VN).strftime('%H:%M %d/%m')}")
         
-        crawl_open_meteo() # Chạy trước (không update time)
+        crawl_open_meteo_forecast() # Dự báo 24h (metric riêng, không đụng số đo)
         vrain_ok = crawl_vrain() # Chạy vrain
         override_rain_with_vrain(vrain_ok) # Override bằng Vrain nếu crawl thành công
         calculate_upstream_list(vrain_ok)

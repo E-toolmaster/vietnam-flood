@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 import path from 'path';
+import { computeRisk } from '../risk-engine';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
@@ -111,7 +112,13 @@ export async function GET() {
         };
       }
 
-        
+      // 2.5. Dự báo mưa 24h tới (Open-Meteo — metric riêng, không lẫn số đo)
+      if (row.name === 'Du_Bao_Mua_24h' && row.history_json) {
+        try {
+          metrics.forecast_rain = JSON.parse(row.history_json);
+        } catch (e) { /* bỏ qua */ }
+      }
+
     });
 
     // 3. Lấy Trạm Mưa (Vrain)
@@ -122,7 +129,7 @@ export async function GET() {
     const rainStationRows = db
       .prepare(
         `
-      SELECT station_name, basin, location, mm, level
+      SELECT station_name, basin, location, mm, level, is_key
       FROM rain_stations
       WHERE date = ?
       ORDER BY mm DESC
@@ -131,6 +138,70 @@ export async function GET() {
       .all(today);
 
     metrics.rain_stations = rainStationRows;
+
+    // 4. Diễn biến mực nước 48h từ river_history (crawler tự tích lũy mỗi chu kỳ)
+    let riverHistory48h = [];
+    try {
+      riverHistory48h = db
+        .prepare(
+          `SELECT ts, level FROM river_history
+           WHERE ts >= datetime('now', 'localtime', '-48 hours')
+           ORDER BY ts`,
+        )
+        .all()
+        .map(r => ({
+          time: `${r.ts.slice(11, 16)} ${r.ts.slice(8, 10)}/${r.ts.slice(5, 7)}`,
+          value: r.level,
+        }));
+    } catch (e) { /* bảng chưa tồn tại ở lần chạy đầu */ }
+    if (metrics.river) {
+      // Ưu tiên chuỗi tự tích lũy; fallback chart VNDMS parse cũ
+      if (riverHistory48h.length >= 3) metrics.river.history = riverHistory48h;
+      metrics.river.history48h = riverHistory48h;
+    }
+
+    // 5. Tính xu hướng dâng từ river_history (cửa sổ ~6 giờ gần nhất)
+    let riverTrend = null;
+    if (riverHistory48h.length >= 2) {
+      const last = riverHistory48h[riverHistory48h.length - 1];
+      const firstIdx = Math.max(0, riverHistory48h.length - 5); // ~6h với chu kỳ 15p
+      const first = riverHistory48h[firstIdx];
+      const [h1, m1] = first.time.split(' ')[0].split(':').map(Number);
+      const [h2, m2] = last.time.split(' ')[0].split(':').map(Number);
+      let hoursSpan = (h2 + m2 / 60) - (h1 + m1 / 60);
+      if (hoursSpan <= 0) hoursSpan = 0.25; // lấn ngày/chưa đủ điểm
+      riverTrend = {
+        risePerHour: (last.value - first.value) / hoursSpan,
+        hoursSpan,
+      };
+    }
+
+    // 6. Risk engine — tính trên server, UI chỉ render
+    const reservoirs = Object.values(metrics)
+      .filter(v => v && v.type === 'reservoir')
+      .map(v => ({
+        name: v.name,
+        q_out: v.q_out,
+        percentFull: v.max_capacity > 0 ? Math.round((v.volume_now / v.max_capacity) * 100) : 0,
+      }));
+
+    let upstreamList = [];
+    try {
+      upstreamList = JSON.parse(metrics.Du_Lieu_Thuong_Nguon?.history_json || '[]');
+    } catch (e) { /* bỏ qua */ }
+
+    metrics.risk = computeRisk({
+      rainStations: metrics.rain_stations,
+      upstreamList,
+      forecast: metrics.forecast_rain,
+      river: metrics.river
+        ? { hasData: metrics.river.current !== undefined && metrics.river.current !== null,
+            current: metrics.river.current,
+            bd1: metrics.river.bd1, bd2: metrics.river.bd2, bd3: metrics.river.bd3 }
+        : { hasData: false },
+      riverTrend,
+      reservoirs,
+    });
 
     db.close();
     return Response.json(

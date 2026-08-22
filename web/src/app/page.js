@@ -8,6 +8,7 @@ import {
   Droplets, CloudRain, AlertTriangle, Menu, X, CheckCircle,
   ExternalLink, Waves, ShieldAlert, MapPin, Clock, Activity, FileText
 } from 'lucide-react';
+import { rainLabel } from './api/risk-engine';
 
 // === CẤU HÌNH LOGIC DỰ BÁO ===
 
@@ -199,107 +200,12 @@ export default function FloodMonitor() {
         : 'from-blue-600 via-blue-500 to-blue-700',
   };
 
-  // --- SMART FORECAST LOGIC (UPDATED) ---
-  const analyzeRisk = () => {
-    let risks = [];
-    let riskLevel = 0; // 0: An toàn, 1: Chú ý, 2: Cảnh báo, 3: Nguy hiểm
-
-    // 1. Check mưa cục bộ (Ngập lụt đô thị)
-    const heavyRainStations = rainStationList.filter(s => s.mm >= 50);
-    const moderateRainStations = rainStationList.filter(s => s.mm >= 25 && s.mm < 50);
-
-    if (heavyRainStations.length > 0) {
-      const affectedZones = groupLocations(heavyRainStations.map(s => s.station_name));
-      risks.push({
-        type: 'local_flood',
-        level: 'high',
-        title: 'Ngập úng cục bộ',
-        desc: `Mưa rất to (>50mm). Nguy cơ ngập sâu các tuyến đường thấp trũng.`,
-        locations: affectedZones // VD: Nam Nha Trang, H. Diên Khánh
-      });
-      riskLevel = Math.max(riskLevel, 2);
-    } 
-    else if (moderateRainStations.length > 3) {
-      const affectedZones = groupLocations(moderateRainStations.map(s => s.station_name));
-      risks.push({
-        type: 'rain_wide',
-        level: 'medium',
-        title: 'Mưa diện rộng',
-        desc: 'Mưa rải rác nhiều nơi. Đường trơn trượt, hạn chế tầm nhìn.',
-        locations: affectedZones
-      });
-      riskLevel = Math.max(riskLevel, 1);
-    }
-
-    // 2. Check Mưa Thượng Nguồn -> Cảnh báo Lũ về Hạ Du (Tây Nha Trang)
-    let upstreamStations = [];
-    try { upstreamStations = JSON.parse(monitorData?.Du_Lieu_Thuong_Nguon?.history_json || '[]'); } catch(e){}
-    
-    // Tính max mưa hôm nay ở đầu nguồn
-    const maxUpstreamToday = Math.max(...upstreamStations.map(s => s.today), 0);
-
-    if (maxUpstreamToday > 100) {
-      risks.push({
-        type: 'flash_flood',
-        level: 'high',
-        title: 'Cảnh báo lũ về hạ du',
-        desc: `Mưa thượng nguồn rất lớn (${maxUpstreamToday.toFixed(0)}mm). Nước sông Cái sẽ lên nhanh, gây ngập vùng ven sông.`,
-        locations: 'Tây Nha Trang, H. Diên Khánh' 
-      });
-      riskLevel = Math.max(riskLevel, 3);
-    } else if (maxUpstreamToday > 50) {
-       risks.push({
-        type: 'flash_flood_warn',
-        level: 'medium',
-        title: 'Mưa lớn đầu nguồn',
-        desc: `Đầu nguồn đang mưa to. Cần theo dõi sát mực nước sông Cái.`,
-        locations: 'Tây Nha Trang'
-      });
-      riskLevel = Math.max(riskLevel, 2);
-    }
-
-    // 3. Check Hồ xả lũ
-    const reservoirs = Object.values(monitorData).filter(v => v.type === 'reservoir');
-    const discharging = reservoirs.filter(r => r.q_out > 50); 
-    if (discharging.length > 0) {
-       risks.push({
-        type: 'discharge',
-        level: 'high',
-        title: 'Hồ chứa xả lũ lớn',
-        desc: `${discharging.length} hồ xả >50m³/s. Nguy cơ ngập vùng trũng ven sông Cái.`,
-        locations: 'H. Diên Khánh, Tây Nha Trang'
-      });
-      riskLevel = Math.max(riskLevel, 3);
-    }
-
-    // 4. Check Lũ Sông Cái thực tế
-    if (!hasRiverData) {
-      risks.push({
-        type: 'no_data', level: 'high', title: 'Không có dữ liệu mực nước',
-        desc: 'Không lấy được số đo trạm Đồng Trăng. Hiện trạng "an toàn" ở trên không đáng tin — hãy kiểm tra nguồn chính thống.',
-        locations: ''
-      });
-      riskLevel = Math.max(riskLevel, 2);
-    } else if (riverLevel >= BD3) { // BĐ3
-       risks.push({
-        type: 'river_flood_3', level: 'high', title: 'Lũ khẩn cấp (Trên BĐ3)',
-        desc: `Nước sông rất cao (${riverLevel.toFixed(2)}m). Ngập lụt nghiêm trọng diện rộng.`,
-        locations: 'Tây Nha Trang, H. Diên Khánh'
-      });
-      riskLevel = 3;
-    } else if (riverLevel >= BD2) { // BĐ2
-       risks.push({
-        type: 'river_flood_2', level: 'high', title: 'Lũ báo động 2',
-        desc: `Nước sông dâng cao (${riverLevel}m). Ngập lụt vùng ven sông.`,
-        locations: 'Tây Nha Trang (Vĩnh Ngọc, Vĩnh Thạnh)'
-      });
-      riskLevel = Math.max(riskLevel, 2);
-    }
-
-    return { risks, riskLevel };
-  };
-
-  const { risks, riskLevel } = analyzeRisk();
+  // --- RISK: tính sẵn trên server (api/risk-engine.js), UI chỉ render ---
+  const riskData = monitorData?.risk || {};
+  const risks = riskData.factors || [];
+  const riskLevel = typeof riskData.level === 'number' ? riskData.level : 0;
+  const observedRisks = risks.filter(r => r.source !== 'forecast');
+  const forecastRisks = risks.filter(r => r.source === 'forecast');
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-900 pb-10">
@@ -514,12 +420,12 @@ export default function FloodMonitor() {
                         
                         <div className="flex justify-between items-end border-t border-white/5 pt-2">
                           <div className="flex flex-col">
-                            <span className="text-[10px] uppercase opacity-60">Hôm nay</span>
+                            <span className="text-[10px] uppercase opacity-60">Hôm nay{st.as_of ? ` (đến ${st.as_of})` : ''}</span>
                             <span className={`text-xl font-mono font-bold ${st.today > 10 ? 'text-yellow-300' : 'text-cyan-300'}`}>
                               {st.today.toFixed(1)} <span className="text-xs font-normal opacity-70 text-white">mm</span>
                             </span>
                           </div>
-                          {(st.has_enough_data || st.total_3day > st.today) && (
+                          {(st.days_present >= 2 || st.has_enough_data) && (
                             <div className="flex flex-col items-end pl-3">
                               <span className="text-[10px] uppercase opacity-60">Tổng 3 ngày</span>
                               <span className="text-lg font-mono font-semibold text-white/90">
@@ -533,6 +439,35 @@ export default function FloodMonitor() {
                   });
                 })()}
               </div>
+
+              {Array.isArray(monitorData?.rain?.rain_3day) && monitorData.rain.rain_3day.length === 3 && (
+                <div className="mt-3 bg-black/10 rounded-lg p-3 border border-white/10">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-semibold text-white/80">
+                      Mưa đầu nguồn 3 ngày (trạm nặng nhất — Vrain)
+                    </span>
+                    {monitorData.rain.updated && (
+                      <span className="text-[10px] text-white/60">Cập nhật: {monitorData.rain.updated}</span>
+                    )}
+                  </div>
+                  <div className="h-24 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartData}>
+                        <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.8)' }} tickLine={false} />
+                        <YAxis tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.8)' }} width={28} />
+                        <Tooltip
+                          cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                          contentStyle={{ backgroundColor: '#020617', border: '1px solid rgba(148,163,184,0.5)', fontSize: 11 }}
+                          labelStyle={{ color: '#e5e7eb' }}
+                          formatter={(val) => [`${val} mm`, 'Mưa']}
+                        />
+                        <Bar dataKey="value" fill="#22d3ee" radius={[3, 3, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+
               <div className="mt-2 text-right text-[10px] opacity-30">Dữ liệu tự động từ Vrain</div>
             </div>
           </div>
@@ -581,20 +516,59 @@ export default function FloodMonitor() {
                 </div>
 
                 {risks.length > 0 ? (
-                  <div className="space-y-3">
-                    {risks.map((risk, index) => (
-                      <div key={index} className="bg-white rounded-lg p-3 border-l-4 shadow-sm" style={{ borderColor: risk.level === 'high' ? '#dc2626' : '#facc15' }}>
-                        <div className="flex justify-between items-center mb-1">
-                          <strong className="text-slate-800">{risk.title}</strong>
-                          {risk.locations && (
-                              <span className="text-[11px] bg-slate-100 px-2 py-0.5 rounded text-slate-600 font-medium border border-slate-200">
-                                  <MapPin size={10} className="inline mr-1 text-red-500"/>{risk.locations}
-                              </span>
-                          )}
+                  <div className="space-y-4">
+                    {observedRisks.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                          <Activity size={12} className="text-red-500" /> Quan trắc thực tế
                         </div>
-                        <p className="text-sm text-slate-600">{risk.desc}</p>
+                        {observedRisks.map((risk, index) => (
+                          <div key={index} className="bg-white rounded-lg p-3 border-l-4 shadow-sm"
+                               style={{ borderColor: risk.level >= 3 ? '#dc2626' : risk.level === 2 ? '#f97316' : '#facc15' }}>
+                            <div className="flex justify-between items-start mb-1 gap-2">
+                              <strong className="text-slate-800">{risk.title}</strong>
+                              <span className="shrink-0 text-[9px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold uppercase">Đã đo</span>
+                            </div>
+                            <p className="text-sm text-slate-600">{risk.desc}</p>
+                            <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                              {risk.locations && (
+                                <span className="text-[11px] bg-slate-100 px-2 py-0.5 rounded text-slate-600 font-medium border border-slate-200">
+                                  <MapPin size={10} className="inline mr-1 text-red-500"/>{risk.locations}
+                                </span>
+                              )}
+                              {risk.stations && risk.stations.length > 0 && (
+                                <span className="text-[11px] bg-slate-100 px-2 py-0.5 rounded text-slate-600 font-medium border border-slate-200">
+                                  <MapPin size={10} className="inline mr-1 text-red-500"/>{groupLocations(risk.stations)}
+                                </span>
+                              )}
+                              {risk.thresholds_ref && (
+                                <span className="text-[9px] text-slate-400 italic">Ngưỡng: {risk.thresholds_ref}</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
+
+                    {forecastRisks.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                          <CloudRain size={12} className="text-blue-500" /> Dự báo 24h tới (mô hình — chưa phải cảnh báo chính thức)
+                        </div>
+                        {forecastRisks.map((risk, index) => (
+                          <div key={index} className="bg-white rounded-lg p-3 border-l-4 border-blue-400 shadow-sm border-dashed">
+                            <div className="flex justify-between items-start mb-1 gap-2">
+                              <strong className="text-slate-800">{risk.title}</strong>
+                              <span className="shrink-0 text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-bold uppercase">Dự báo</span>
+                            </div>
+                            <p className="text-sm text-slate-600">{risk.desc}</p>
+                            {risk.thresholds_ref && (
+                              <span className="text-[9px] text-slate-400 italic">Ngưỡng: {risk.thresholds_ref}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="bg-green-100/50 rounded-lg p-4 border border-green-200">
@@ -644,9 +618,11 @@ export default function FloodMonitor() {
                       </td>
                       <td className="px-4 py-3 text-right hidden sm:table-cell">
                         <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase
-                          ${st.mm > 50 ? 'bg-blue-100 text-blue-700' : 
+                          ${st.mm >= 100 ? 'bg-red-100 text-red-700' :
+                            st.mm >= 50 ? 'bg-orange-100 text-orange-700' :
+                            st.mm >= 16 ? 'bg-yellow-50 text-yellow-700' :
                             st.mm > 0 ? 'bg-cyan-50 text-cyan-700' : 'bg-slate-100 text-slate-400'}`}>
-                          {st.level || (st.mm > 0 ? 'Mưa nhỏ' : 'Tạnh ráo')}
+                          {rainLabel(st.mm)}
                         </span>
                       </td>
                     </tr>
