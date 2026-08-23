@@ -124,9 +124,9 @@ function RiskMap({ center, province, provinceName, river, riverDanger, reservoir
                 dark: {
                   type: 'raster',
                   tiles: [
-                    'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
-                    'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
-                    'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
+                    'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+                    'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+                    'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
                   ],
                   tileSize: 256,
                   attribution: '© OpenStreetMap, © CARTO, DEM: AWS/Mapzen',
@@ -188,16 +188,16 @@ function RiskMap({ center, province, provinceName, river, riverDanger, reservoir
               map.addLayer({
                 id: 'river-glow', type: 'line', source: 'rivers',
                 paint: {
-                  'line-color': '#0284c7',
+                  'line-color': '#60a5fa',
                   'line-width': ['interpolate', ['linear'], ['zoom'], 7, 5, 10, 8, 14, 16],
-                  'line-opacity': 0.28,
+                  'line-opacity': 0.4,
                   'line-blur': 3,
                 },
               });
               map.addLayer({
                 id: 'river-base', type: 'line', source: 'rivers',
                 paint: {
-                  'line-color': '#38bdf8',
+                  'line-color': '#1d4ed8',
                   'line-width': ['interpolate', ['linear'], ['zoom'], 7, 2.2, 10, 3.6, 14, 8],
                   'line-opacity': 0.9,
                 },
@@ -205,7 +205,7 @@ function RiskMap({ center, province, provinceName, river, riverDanger, reservoir
               map.addLayer({
                 id: 'river-flow', type: 'line', source: 'rivers',
                 paint: {
-                  'line-color': '#e0f2fe',
+                  'line-color': '#ffffff',
                   'line-width': ['interpolate', ['linear'], ['zoom'], 7, 1.4, 10, 2.2, 14, 4.5],
                   'line-opacity': 1,
                 },
@@ -337,15 +337,15 @@ function RiskMap({ center, province, provinceName, river, riverDanger, reservoir
 
   return (
     <div className="relative">
-      <div ref={containerRef} className="w-full rounded-xl overflow-hidden bg-slate-900" style={{ height: 460 }} />
+      <div ref={containerRef} className="w-full rounded-xl overflow-hidden bg-slate-200" style={{ height: 460 }} />
       {!ready && !mapError && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-900 text-slate-400 rounded-xl">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-100 text-slate-500 rounded-xl">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
           <span className="text-xs font-semibold">Đang tải dữ liệu quan trắc tỉnh...</span>
         </div>
       )}
       {mapError && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-900/95 text-white rounded-xl p-4 text-center">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-100 text-slate-800 rounded-xl p-4 text-center">
           <span className="text-sm font-bold">Trình duyệt không mở được bản đồ 3D</span>
           <span className="text-[11px] text-white/60 break-all max-w-md">{mapError}</span>
           <a href={`https://www.windy.com/?rain,${center.lat},${center.lon},8`} target="_blank" rel="noreferrer"
@@ -355,7 +355,7 @@ function RiskMap({ center, province, provinceName, river, riverDanger, reservoir
         </div>
       )}
       {!mapError && (
-        <div className="absolute bottom-2 left-2 z-10 bg-slate-900/85 text-white text-[10px] px-2.5 py-1.5 rounded-lg flex flex-wrap gap-x-3 gap-y-0.5 max-w-[92%]">
+        <div className="absolute bottom-2 left-2 z-10 bg-white/85 text-slate-800 text-[10px] px-2.5 py-1.5 rounded-lg flex flex-wrap gap-x-3 gap-y-0.5 max-w-[92%]">
           <span className="text-cyan-300 font-bold">~ dòng sáng = dòng chảy sông chính</span>
           <span className="text-red-400 font-bold">◯ đỏ lan = vùng nguy cơ ngập</span>
           <span>🔴 nháy = điểm nguy hiểm</span>
